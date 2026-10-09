@@ -93,6 +93,20 @@ export async function fetchReports({ signal, timeoutMs = 10000 } = {}) {
 }
 
 /**
+ * Retrieve one saved report by id (used when the detail page is opened directly
+ * or reloaded, where no record was carried along by navigation).
+ * @returns {Promise<object>}
+ */
+export async function fetchReportById(id, { signal, timeoutMs = 10000 } = {}) {
+  const { data } = await apiRequest(`${REPORTS_ENDPOINT}/${encodeURIComponent(String(id))}`, {
+    method: 'GET',
+    signal,
+    timeoutMs,
+  })
+  return normalizeStoredReport(data)
+}
+
+/**
  * Save a report. Safe to repeat: the backend de-duplicates on
  * `client_request_id`, so a double click or retry never creates a second row.
  *

@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Tag,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -24,13 +25,41 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { formatConfidence, formatDateTime, formatReportId, PLACEHOLDER } from '@/lib/format'
 import { resolveSubmissionStatus } from '@/lib/submissionStatus'
+import { fetchReportById } from '@/services/reportsService'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function ReportDetail() {
   const { reportId } = useParams()
   const location = useLocation()
-  const report = location.state?.report ?? null
+  const stateReport = location.state?.report ?? null
+  const isDemoId = String(reportId).startsWith('DEMO-')
+  const [fetched, setFetched] = useState({ id: null, report: null })
+
+  // Opened directly or reloaded: load the record from the backend by id.
+  useEffect(() => {
+    if (stateReport || isDemoId) return undefined
+    const controller = new AbortController()
+    fetchReportById(reportId, { signal: controller.signal })
+      .then((loaded) => setFetched({ id: reportId, report: loaded }))
+      .catch(() => {
+        if (!controller.signal.aborted) setFetched({ id: reportId, report: null })
+      })
+    return () => controller.abort()
+  }, [reportId, stateReport, isDemoId])
+
+  const report = stateReport ?? (fetched.id === reportId ? fetched.report : null)
+  const isLoading = !stateReport && !isDemoId && fetched.id !== reportId
 
   useDocumentTitle(`Report ${formatReportId(reportId)}`)
+
+  if (isLoading) {
+    return (
+      <Container className="flex items-center justify-center gap-3 py-24 text-muted-foreground">
+        <Spinner className="size-5" label="Loading report" />
+        <span className="text-sm">Loading report…</span>
+      </Container>
+    )
+  }
 
   /* ------------------------------------------------------------------ */
   /* Nothing to show: persistence and GET /reports/:id do not exist yet.  */
@@ -50,8 +79,8 @@ export default function ReportDetail() {
             description={
               <>
                 <p>
-                  This view is opened from a row on the dashboard, which carries the record along with the navigation.
-                  Reloading this page clears it, so go back to the dashboard and open the report again.
+                  We could not find this report. It may have been removed, or the server may be starting up. Go back
+                  to the dashboard and try opening it again.
                 </p>
               </>
             }

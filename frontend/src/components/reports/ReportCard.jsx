@@ -38,7 +38,6 @@ export function ReportCardList({ reports }) {
                     {report.issueType ?? report.issue_type ?? PLACEHOLDER}
                   </p>
                 </div>
-                <ArrowUpRight aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -54,6 +53,11 @@ export function ReportCardList({ reports }) {
                 </span>
                 <span>Reported {formatDate(report.reportedAt ?? report.reported_at) ?? PLACEHOLDER}</span>
               </div>
+
+              <span className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-primary">
+                View report
+                <ArrowUpRight aria-hidden="true" className="size-3.5" />
+              </span>
             </Link>
           </li>
         )

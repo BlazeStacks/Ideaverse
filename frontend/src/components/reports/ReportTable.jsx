@@ -1,6 +1,7 @@
 import { ArrowUpRight, FlaskConical } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { Button } from '@/components/ui/button'
 import { SeverityBadge } from '@/components/reports/SeverityBadge'
 import { StatusBadge, SubmissionStatusBadge } from '@/components/reports/StatusBadge'
 import { formatDate, formatReportId, PLACEHOLDER } from '@/lib/format'
@@ -8,9 +9,8 @@ import { formatDate, formatReportId, PLACEHOLDER } from '@/lib/format'
 /**
  * Desktop table of reports. Hidden below `md`, where `ReportCard` is used.
  *
- * The active report is passed through router state rather than a URL, because
- * there is no backend to fetch it from and report identifiers should not be
- * treated as deep links yet.
+ * The record is passed through router state for an instant open; the detail page
+ * falls back to GET /reports/:id when opened directly.
  *
  * @param {{ reports: Array<object> }} props
  */
@@ -81,15 +81,13 @@ export function ReportTable({ reports }) {
                   {formatDate(report.reportedAt ?? report.reported_at) ?? PLACEHOLDER}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    to={`/dashboard/reports/${encodeURIComponent(String(id))}`}
-                    state={{ report }}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-primary transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    View
-                    <ArrowUpRight aria-hidden="true" className="size-3.5" />
-                    <span className="sr-only"> details for {reference}</span>
-                  </Link>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/dashboard/reports/${encodeURIComponent(String(id))}`} state={{ report }}>
+                      View report
+                      <ArrowUpRight aria-hidden="true" />
+                      <span className="sr-only"> {reference}</span>
+                    </Link>
+                  </Button>
                 </td>
               </tr>
             )
