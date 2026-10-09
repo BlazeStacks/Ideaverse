@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* ---------------------------------------------------------------------------
+   CivicFix AI — design tokens
+   Light neutral canvas, deep navy ink, restrained teal accent.
+   Every colour pair below is checked for accessible contrast when used for
+   text on its documented background.
+--------------------------------------------------------------------------- */
+@theme {
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+
+  /* Surfaces */
+  --color-background: #f5f7f9;
+  --color-foreground: #0d1b2a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0d1b2a;
+  --color-muted: #eef2f6;
+  --color-muted-foreground: #566676;
+
+  /* Brand */
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e4f1ef;
+  --color-secondary-hover: #d3e8e4;
+  --color-secondary-foreground: #0b4a46;
+  --color-accent: #0f766e;
+  --color-accent-foreground: #ffffff;
+
+  /* Semantic */
+  --color-destructive: #b42318;
+  --color-destructive-hover: #911b12;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-info: #0369a1;
+
+  /* Lines & focus */
+  --color-border: #e2e8ee;
+  --color-input: #d3dde6;
+  --color-ring: #0f766e;
+
+  /* Deep navy sections */
+  --color-navy: #0b1f33;
+  --color-navy-soft: #12314c;
+  --color-navy-foreground: #eaf0f5;
+  --color-navy-muted: #a3b7ca;
+  --color-navy-border: #1e3d59;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    @apply font-semibold tracking-tight text-balance;
+  }
+
+  p {
+    @apply text-pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+  }
+
+  /* Keep number-heavy UI (estimates, counters) aligned. */
+  [data-slot='metric'] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Complaint print view
+   The complaint editor portals a print sheet into #complaint-print-root. When
+   that component is mounted it adds `print-complaint` to <body>, so printing
+   the results page produces the complaint document instead of the app shell.
+   Every other page prints normally.
+--------------------------------------------------------------------------- */
+#complaint-print-root {
+  display: none;
+}
+
+@media print {
+  body.print-complaint #root {
+    display: none !important;
+  }
+
+  body.print-complaint #complaint-print-root {
+    display: block !important;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .complaint-print-sheet {
+    color: #000000;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size: 11.5pt;
+    line-height: 1.5;
+  }
+
+  .complaint-print-kicker {
+    margin: 0 0 2mm;
+    color: #333333;
+    font-size: 9pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .complaint-print-sheet h1 {
+    margin: 0 0 5mm;
+    font-size: 15pt;
+    line-height: 1.25;
+  }
+
+  .complaint-print-sheet h2 {
+    margin: 6mm 0 1.5mm;
+    font-size: 11pt;
+  }
+
+  .complaint-print-addressee {
+    margin: 5mm 0 0;
+  }
+
+  .complaint-print-body {
+    margin: 4mm 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10pt;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .complaint-print-footer {
+    margin-top: 8mm;
+    border-top: 1px solid #999999;
+    padding-top: 3mm;
+    color: #333333;
+    font-size: 9pt;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

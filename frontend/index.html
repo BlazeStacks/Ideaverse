@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      name="description"
+      content="CivicFix AI helps citizens report civic infrastructure issues and review AI-assisted assessments with severity, department and repair-planning guidance."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>CivicFix AI — Civic infrastructure assessment &amp; repair planning</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      Print-only mount point. The complaint editor portals a print sheet here so
+      that printing the results page produces the complaint document alone
+      instead of the surrounding application chrome. Nothing else renders here.
+    -->
+    <div id="complaint-print-root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
