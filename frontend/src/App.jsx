@@ -6,6 +6,7 @@ import About from '@/pages/About'
 import Dashboard from '@/pages/Dashboard'
 import Help from '@/pages/Help'
 import Home from '@/pages/Home'
+import IssueMap from '@/pages/IssueMap'
 import NotFound from '@/pages/NotFound'
 import ReportDetail from '@/pages/ReportDetail'
 import ReportIssue from '@/pages/ReportIssue'
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/report" element={<ReportIssue />} />
           <Route path="/results" element={<ReportResults />} />
+          <Route path="/map" element={<IssueMap />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/reports/:reportId" element={<ReportDetail />} />
           <Route path="*" element={<NotFound />} />

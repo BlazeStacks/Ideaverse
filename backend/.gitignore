@@ -1,0 +1,14 @@
+# ---------------------------------------------------------------------------
+# Backend ignores. Real credentials live in .env and are never committed.
+# ---------------------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.log

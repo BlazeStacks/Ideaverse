@@ -2,7 +2,17 @@
  * CivicFix AI — API service
  * ==========================================================================
  * This is the single integration layer between the frontend and the FastAPI
- * backend that is developed independently on another machine.
+ * backend in `backend/main.py`.
+ *
+ * Verified contract (read from backend/main.py):
+ *   POST /analyze            multipart/form-data
+ *     file                   required  JPEG / PNG / WEBP image, <= 8 MB
+ *     location               optional  free text (backend default "Not provided",
+ *                                      read up to 500 characters)
+ *     additional_details     optional  free text (read up to 1500 characters)
+ *   GET  /health             {"status": "ok"}
+ *   The backend has no field for a category or coordinates; those are never
+ *   sent as separate fields (see `lib/reportPayload.js` for how they are used).
  *
  * Rules this file follows:
  *  - Fetch API only. No mock server, no bundled fake responses, no simulated
@@ -14,7 +24,7 @@
  *    malformed JSON, unexpected schema) is distinguishable by
  *    `ApiError.code` so the UI can explain what actually happened.
  *
- * Docs for the planned contract: see README.md → "Backend integration".
+ * Docs: see README.md → "The integration contract".
  */
 
 import { isRecognizedAnalysisPayload } from '@/lib/analysis'
@@ -43,6 +53,8 @@ export const API_ERROR_CODES = {
   HTTP: 'http_error',
   MALFORMED_RESPONSE: 'malformed_response',
   UNEXPECTED_SCHEMA: 'unexpected_schema',
+  /** Raised locally, without sending anything, when a request is already running. */
+  DUPLICATE: 'duplicate_submission',
 }
 
 export class ApiError extends Error {
@@ -69,8 +81,7 @@ function messageForNetworkFailure(url) {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'this site'
   return (
     `Could not reach the analysis service at ${url}. ` +
-    'The AI backend is developed separately and may not be running yet. ' +
-    `Check that it is started and that CORS allows requests from ${origin}. ` +
+    `Check that the backend is running and that its CORS_ORIGINS setting includes ${origin}. ` +
     'Nothing was analysed and no report was created.'
   )
 }
@@ -96,20 +107,20 @@ function extractErrorDetail(payload) {
   return null
 }
 
-function messageForHttpFailure(status, statusText, detail, url) {
+function messageForHttpFailure(status, statusText, detail, url, method = 'POST') {
   const base = `The analysis service responded with HTTP ${status}${statusText ? ` ${statusText}` : ''}.`
   const parts = [base]
   if (detail) parts.push(detail)
-  parts.push(`Request: POST ${url}`)
+  parts.push(`Request: ${method} ${url}`)
   return parts.join(' ')
 }
 
 /**
  * Perform a JSON request with timeout and caller-provided cancellation.
  * @param {string} path
- * @param {{ method?: string, body?: BodyInit, signal?: AbortSignal, timeoutMs?: number }} [options]
+ * @param {{ method?: string, body?: BodyInit, headers?: Record<string, string>, signal?: AbortSignal, timeoutMs?: number }} [options]
  */
-export async function apiRequest(path, { method = 'GET', body, signal, timeoutMs = 60000 } = {}) {
+export async function apiRequest(path, { method = 'GET', body, headers, signal, timeoutMs = 60000 } = {}) {
   const url = `${API_BASE_URL}${path}`
   const controller = new AbortController()
   let timedOut = false
@@ -128,6 +139,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, timeoutMs
   // Only attach a body when there is one: GET requests must not carry a body.
   const requestInit = { method, signal: controller.signal }
   if (body !== undefined && body !== null) requestInit.body = body
+  if (headers) requestInit.headers = headers
 
   let response
   try {
@@ -169,7 +181,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, timeoutMs
   }
 
   if (!response.ok) {
-    throw new ApiError(messageForHttpFailure(response.status, response.statusText, extractErrorDetail(payload), url), {
+    throw new ApiError(messageForHttpFailure(response.status, response.statusText, extractErrorDetail(payload), url, method), {
       code: API_ERROR_CODES.HTTP,
       status: response.status,
       detail: extractErrorDetail(payload),
@@ -192,105 +204,47 @@ export async function apiRequest(path, { method = 'GET', body, signal, timeoutMs
 /* -------------------------------------------------------------------------- */
 
 /**
- * PROPOSED FIELDS — opt-in, documented, and safe to disable.
- * ==========================================================================
- * The agreed contract has exactly three multipart fields:
- * `file`, `location`, `additional_details`.
+ * Describe exactly which multipart fields a submission contains, so the UI can
+ * show the truth instead of a guess. The backend accepts three fields only.
  *
- * The reporting form now collects a category and (optionally) coordinates,
- * which the current backend has not been asked to consume yet. Rather than
- * silently changing the contract, the extra fields are opt-in through this
- * switch and documented as a proposal for the backend developer:
- *
- *   issue_category  string  — one of the ids in src/config/issueCategories.js
- *                             ("let-ai-decide" is never sent, because it means
- *                             "the citizen did not choose")
- *   latitude        float   — browser geolocation latitude, only when the
- *                             citizen explicitly captured their location
- *   longitude       float   — matching longitude
- *
- * A backend that ignores unknown form fields keeps working unchanged.
- * Set a flag to `false` to send exactly the original three-field contract.
+ * @param {{ categoryInDetails?: boolean, coordinatesInLocation?: boolean }} [params]
+ * @returns {Array<{ name: string, sent: boolean, note: string }>}
  */
-export const PROPOSED_ANALYZE_FIELDS = {
-  issueCategory: true,
-  coordinates: true,
-}
-
-/**
- * Describe exactly which multipart fields a submission will contain, so the UI
- * can show the truth instead of a guess.
- *
- * @param {{ issueCategory?: string|null, coordinates?: { latitude: number, longitude: number }|null }} [params]
- * @returns {Array<{ name: string, kind: 'documented'|'proposed', sent: boolean, note?: string }>}
- */
-export function describeAnalyzeFields({ issueCategory = null, coordinates = null } = {}) {
+export function describeAnalyzeFields({ categoryInDetails = false, coordinatesInLocation = false } = {}) {
   return [
-    { name: 'file', kind: 'documented', sent: true },
-    { name: 'location', kind: 'documented', sent: true },
-    { name: 'additional_details', kind: 'documented', sent: true },
     {
-      name: 'issue_category',
-      kind: 'proposed',
-      sent: Boolean(PROPOSED_ANALYZE_FIELDS.issueCategory && issueCategory),
-      note: 'Sent only when you choose a category.',
+      name: 'file',
+      sent: true,
+      note: 'The photograph (JPEG, PNG or WEBP, up to 8 MB).',
     },
     {
-      name: 'latitude',
-      kind: 'proposed',
-      sent: Boolean(PROPOSED_ANALYZE_FIELDS.coordinates && coordinates),
-      note: 'Sent only when you capture your current location.',
+      name: 'location',
+      sent: true,
+      note: coordinatesInLocation
+        ? 'Your captured GPS coordinates, because no address was typed.'
+        : 'The location text you entered, including any landmark.',
     },
     {
-      name: 'longitude',
-      kind: 'proposed',
-      sent: Boolean(PROPOSED_ANALYZE_FIELDS.coordinates && coordinates),
-      note: 'Sent only when you capture your current location.',
+      name: 'additional_details',
+      sent: true,
+      note: categoryInDetails
+        ? 'Your notes, the category you chose and any follow-up answers, as plain text.'
+        : 'Your notes and any follow-up answers, as plain text.',
     },
   ]
 }
 
 /**
- * Build the multipart body for POST /analyze.
+ * Build the multipart body for POST /analyze: exactly `file`, `location` and
+ * `additional_details`, the three fields the backend reads.
  *
- * The three documented fields are always present. The proposed fields are added
- * only when they have a value and their feature flag is on.
- *
- * @param {{
- *   file: File,
- *   location: string,
- *   additionalDetails?: string,
- *   issueCategory?: string|null,
- *   coordinates?: { latitude: number, longitude: number }|null,
- * }} params
+ * @param {{ file: File, location: string, additionalDetails?: string }} params
  */
-export function buildAnalyzeFormData({
-  file,
-  location,
-  additionalDetails = '',
-  issueCategory = null,
-  coordinates = null,
-} = {}) {
+export function buildAnalyzeFormData({ file, location, additionalDetails = '' } = {}) {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('location', typeof location === 'string' ? location.trim() : '')
   formData.append('additional_details', typeof additionalDetails === 'string' ? additionalDetails.trim() : '')
-
-  if (PROPOSED_ANALYZE_FIELDS.issueCategory && typeof issueCategory === 'string' && issueCategory.trim()) {
-    formData.append('issue_category', issueCategory.trim())
-  }
-
-  const hasCoordinates =
-    PROPOSED_ANALYZE_FIELDS.coordinates &&
-    coordinates &&
-    Number.isFinite(coordinates.latitude) &&
-    Number.isFinite(coordinates.longitude)
-
-  if (hasCoordinates) {
-    formData.append('latitude', String(coordinates.latitude))
-    formData.append('longitude', String(coordinates.longitude))
-  }
-
   return formData
 }
 
@@ -300,20 +254,11 @@ export function buildAnalyzeFormData({
  * Returns the parsed backend response exactly as received (no shaping, no
  * invented defaults). Call `normalizeAnalysis` to render it defensively.
  *
- * @param {{
- *   file: File,
- *   location: string,
- *   additionalDetails?: string,
- *   issueCategory?: string|null,
- *   coordinates?: { latitude: number, longitude: number }|null,
- * }} params
+ * @param {{ file: File, location: string, additionalDetails?: string }} params
  * @param {{ signal?: AbortSignal, timeoutMs?: number }} [options]
  * @returns {Promise<{ payload: unknown, receivedAt: string, status: number, url: string }>}
  */
-export async function analyzeIssue(
-  { file, location, additionalDetails = '', issueCategory = null, coordinates = null } = {},
-  options = {},
-) {
+export async function analyzeIssue({ file, location, additionalDetails = '' } = {}, options = {}) {
   if (!(file instanceof File) && !file) {
     throw new ApiError('A photograph is required before an analysis can be requested.', {
       code: API_ERROR_CODES.VALIDATION,
@@ -321,7 +266,7 @@ export async function analyzeIssue(
     })
   }
 
-  const formData = buildAnalyzeFormData({ file, location, additionalDetails, issueCategory, coordinates })
+  const formData = buildAnalyzeFormData({ file, location, additionalDetails })
 
   // Intentionally no Content-Type header: the browser sets the multipart boundary.
   const { data, status, url } = await apiRequest(ANALYZE_ENDPOINT, {
@@ -333,8 +278,8 @@ export async function analyzeIssue(
 
   if (!isRecognizedAnalysisPayload(data)) {
     throw new ApiError(
-      'The analysis service responded successfully but the body was not a JSON object matching the documented response schema. ' +
-        'Update src/lib/analysis.js if the agreed contract has changed.',
+      'The analysis service responded successfully but the body was not a non-empty JSON object, so it cannot be displayed. ' +
+        'Nothing was analysed.',
       { code: API_ERROR_CODES.UNEXPECTED_SCHEMA, status, url, detail: typeof data === 'string' ? data : null },
     )
   }
@@ -347,8 +292,8 @@ export async function analyzeIssue(
  *
  * Used only by the "test connection" affordance on the report form. It never
  * reports success on the caller's behalf: it returns what actually happened.
- * The documented contract only guarantees POST /analyze, so a 404 here means
- * the service is reachable but exposes no health route.
+ * The backend exposes GET /health. A 404 here means a different service (or an
+ * older build) is listening on that address.
  *
  * @param {{ signal?: AbortSignal, timeoutMs?: number }} [options]
  * @returns {Promise<{ reachable: boolean, ok: boolean, status: number|null, detail: string }>}
@@ -375,7 +320,7 @@ export async function checkBackendHealth(options = {}) {
         status: error.status,
         detail:
           error.status === 404
-            ? 'The service is reachable but does not expose /health. Analysis requests may still work.'
+            ? 'Something is listening there but it does not expose /health, so it may not be the CivicFix backend.'
             : `The service is reachable but /health returned HTTP ${error.status}.`,
       }
     }

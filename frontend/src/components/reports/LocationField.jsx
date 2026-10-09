@@ -1,5 +1,5 @@
 import { Check, Crosshair, Info, MapPin, Navigation, X } from 'lucide-react'
-import { useCallback, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
 
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { GEOLOCATION_NOTE, MAX_LANDMARK_LENGTH, MAX_LOCATION_LENGTH, MIN_LOCATION_LENGTH } from '@/lib/constants'
 import { describeCoordinates, formatCoordinates } from '@/lib/location'
 import { GEOLOCATION_STATE, useGeolocation } from '@/hooks/useGeolocation'
+
+const LocationPicker = lazy(() => import('@/components/map/LocationPicker'))
 
 /**
  * Location input.
@@ -135,11 +137,29 @@ export function LocationField({
         </Alert>
       ) : null}
 
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-foreground">Pin the exact spot on the map (optional)</p>
+        <Suspense fallback={<div className="h-72 w-full animate-pulse rounded-xl border border-border bg-muted" />}>
+          <LocationPicker
+            coordinates={coordinates}
+            onSelect={onCoordinatesChange}
+            onLocate={handleUseMyLocation}
+            isLocating={geo.isRequesting}
+            disabled={disabled}
+          />
+        </Suspense>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Click the map to place the pin, or press &ldquo;Use my location&rdquo; on the map. Zoom in first for an accurate
+          position. If you save the report, the pin is stored and shown on the Issue Map; without a pin the report is
+          still saved but not plotted.
+        </p>
+      </div>
+
       {coordinates ? (
         <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-foreground">
             <MapPin aria-hidden="true" className="size-4 text-primary" />
-            Review the captured location
+            Review the selected location
           </p>
 
           <dl className="grid gap-3 sm:grid-cols-3">
@@ -186,8 +206,9 @@ export function LocationField({
 
           <p className="text-xs leading-relaxed text-muted-foreground">
             CivicFix cannot turn coordinates into a street address (that needs a geocoding service), so the typed
-            location above is what a human will read. If the backend is extended to accept coordinates, they will be
-            sent along as <span className="font-mono">latitude</span> and <span className="font-mono">longitude</span>.
+            location above is what a human will read. The coordinates are saved as{' '}
+            <span className="font-mono">latitude</span> and <span className="font-mono">longitude</span> only when you
+            press &ldquo;Save report&rdquo; on the results page.
           </p>
         </div>
       ) : null}

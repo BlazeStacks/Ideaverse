@@ -31,7 +31,7 @@ export const VERIFICATION_STATUS = {
 }
 
 /** Date the directory entries below were last reviewed by hand. */
-export const DIRECTORY_REVIEWED_ON = '2026-10-09'
+export const DIRECTORY_REVIEWED_ON = '2026-10-10'
 
 /** Sentinel for "my city is not in the directory yet". */
 export const OTHER_CITY_ID = 'other'
@@ -104,9 +104,9 @@ export const AUTHORITY_ENTRIES = [
         url: 'https://complaint.pmc.gov.in/home?language=en',
         method: 'Online complaint form on the authority’s own portal',
         verificationStatus: VERIFICATION_STATUS.VERIFIED,
-        lastVerified: '2026-10-09',
+        lastVerified: '2026-10-10',
         verifiedHow:
-          'Identified as the municipal complaint channel from the Pune Municipal Corporation website and its official complaint references.',
+          'The portal at complaint.pmc.gov.in presents itself as the Pune Municipal Corporation Complaint Management System (checked 2026-10-10).',
         caveats:
           'CivicFix has not confirmed that this portal accepts pasted or pre-filled complaint text, and it never submits anything for you. Expect to paste or retype your complaint into their form, and keep their reference number once they issue one.',
       },
@@ -117,8 +117,9 @@ export const AUTHORITY_ENTRIES = [
         phone: '1800 1030 222',
         method: 'Phone complaint to the municipal helpline',
         verificationStatus: VERIFICATION_STATUS.VERIFIED,
-        lastVerified: '2026-10-09',
-        verifiedHow: 'Number published on the Pune Municipal Corporation website.',
+        lastVerified: '2026-10-10',
+        verifiedHow:
+          'Number shown on the PMC Complaint Management System page (complaint.pmc.gov.in) as the toll-free line, 7am to 11pm (checked 2026-10-10).',
         caveats:
           'CivicFix does not call on your behalf. Ask for the complaint reference number and note it down.',
       },
@@ -167,9 +168,9 @@ export const AUTHORITY_ENTRIES = [
         url: 'https://wss.mahadiscom.in/ICRS/registerComplaint.aspx?Lang=en-US',
         method: 'Online complaint registration form on the utility’s official website',
         verificationStatus: VERIFICATION_STATUS.VERIFIED,
-        lastVerified: '2026-10-09',
+        lastVerified: '2026-10-10',
         verifiedHow:
-          'Identified from the official mahadiscom.in consumer complaint pages and the utility’s official complaint channel references.',
+          'This is the utility’s own Internal Complaint Redressal System registration page on wss.mahadiscom.in (checked 2026-10-10).',
         caveats:
           'The form may require a consumer number for some complaint types. CivicFix does not submit anything and cannot confirm which categories their form accepts.',
       },
@@ -177,11 +178,12 @@ export const AUTHORITY_ENTRIES = [
         id: 'msedcl-helpline',
         type: 'phone',
         label: 'Mahavitaran helpline',
-        phone: '1912 / 19120 / 1800 212 3435',
+        phone: '1912 / 19120 / 1800 233 3435 / 1800 212 3435',
         method: 'Phone complaint to the utility helpline',
         verificationStatus: VERIFICATION_STATUS.VERIFIED,
-        lastVerified: '2026-10-09',
-        verifiedHow: 'Numbers published on the official mahadiscom.in contact page.',
+        lastVerified: '2026-10-10',
+        verifiedHow:
+          'Numbers listed on the official mahadiscom.in Contact Us page and on the ICRS complaint page (checked 2026-10-10).',
         caveats: 'CivicFix does not call on your behalf.',
       },
     ],

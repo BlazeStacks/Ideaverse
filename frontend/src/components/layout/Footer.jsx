@@ -1,4 +1,3 @@
-import { CircleAlert, CircleCheckBig, GitBranch, ShieldQuestion } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { BrandMark } from '@/components/layout/BrandMark'
@@ -69,46 +68,6 @@ export function Footer() {
               </ul>
             </nav>
           ))}
-
-          {/* Build status */}
-          <div className="space-y-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Build status
-            </p>
-            <ul className="space-y-2.5 text-sm">
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CircleCheckBig
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0"
-                  style={{ color: 'var(--color-success)' }}
-                />
-                <span>Report, results and dashboard interfaces</span>
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CircleAlert
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0"
-                  style={{ color: 'var(--color-warning)' }}
-                />
-                <span>AI analysis — requires the separately developed backend</span>
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CircleCheckBig
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0"
-                  style={{ color: 'var(--color-success)' }}
-                />
-                <span>Complaint drafting and authority guidance</span>
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <ShieldQuestion
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                />
-                <span>No complaint is submitted or tracked by CivicFix</span>
-              </li>
-            </ul>
-          </div>
         </div>
 
         <div
@@ -121,10 +80,6 @@ export function Footer() {
           <p>
             © {new Date().getFullYear()} {APP_NAME}. Independent civic-tech project — not
             affiliated with, endorsed by or integrated with any government body.
-          </p>
-          <p className="flex items-center gap-1.5">
-            <GitBranch aria-hidden="true" className="size-3.5" />
-            Frontend and backend developed independently.
           </p>
         </div>
       </Container>

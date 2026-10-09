@@ -1,4 +1,4 @@
-import { CalendarClock, ImageOff, MapPin, Tag, Waves } from 'lucide-react'
+import { CalendarClock, ImageOff, MapPin, ScanSearch, Tag, Waves } from 'lucide-react'
 import { useState } from 'react'
 
 import { ConfidenceMeter } from '@/components/reports/ConfidenceMeter'
@@ -50,6 +50,10 @@ export function AnalysisSummary({ analysis, request, receivedAt, previewUrl }) {
       value: formatDateTime(receivedAt) ?? 'Time not recorded',
       muted: !receivedAt,
     },
+    // Reported by the backend itself; shown only when present.
+    ...(analysis.modelName
+      ? [{ icon: ScanSearch, label: 'Analysed by model', value: analysis.modelName, muted: false }]
+      : []),
   ]
 
   return (

@@ -10,7 +10,7 @@ import {
   TriangleAlert,
   UserCog,
 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -37,7 +37,6 @@ const PLANNED_ACTIONS = [
   { label: 'Assign an inspector', detail: 'Requires report storage and officer accounts. CivicFix has no official dashboard.' },
   { label: 'Change report status', detail: 'Requires a write endpoint and an audit history from the authority.' },
   { label: 'Export the filtered list', detail: 'Requires a real dataset to export.' },
-  { label: 'Open the incident map', detail: 'Requires genuine report coordinates and a verified data source.' },
 ]
 
 export default function Dashboard() {
@@ -46,6 +45,11 @@ export default function Dashboard() {
   const { source, reports, isLoading, error, lastLoadedAt, isDemo, connect, loadDemo, clear } = useReports()
   const { sessionId, analysis, complaint, submissionStatus, receivedAt } = useAnalysisSession()
   const sessionStatus = resolveSubmissionStatus(submissionStatus)
+
+  // Load saved reports from the backend as soon as the page opens.
+  useEffect(() => {
+    connect()
+  }, [connect])
 
   const {
     filters,
@@ -75,14 +79,14 @@ export default function Dashboard() {
     }
   }, [reports, hasData])
 
-  const unavailableHint = 'Not available until a reports API is connected.'
+  const unavailableHint = 'Reports have not been loaded.'
 
   return (
     <>
       <PageHeader
         eyebrow="Citizen view"
         title="My reports"
-        description="Keep track of the civic problems you have reported and what you did about them. Reports are not stored on a server yet, so this page shows either records returned by a connected reports API or clearly labelled sample data — and it never invents municipal statistics."
+        description="Reports you have saved, loaded from the backend database. This page never invents municipal statistics; the optional sample data is clearly labelled."
         actions={
           <Button asChild>
             <Link to="/report">
@@ -111,8 +115,8 @@ export default function Dashboard() {
               </div>
               <CardDescription>
                 {analysis.issueType ? `Assessed as “${analysis.issueType}”. ` : 'Assessment in progress. '}
-                This report, its complaint draft and its status exist only in this browser tab — they are not saved
-                anywhere, and they disappear when you reload or close it.
+                Its complaint draft and submission status exist only in this browser tab. Use Save report on the
+                assessment page to store the report itself.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-2">
@@ -221,14 +225,13 @@ export default function Dashboard() {
             description={
               <>
                 <p>
-                  Report history is not implemented. The agreed backend contract exposes only the analysis endpoint,
-                  which returns an assessment without saving it, so there are no real records to list here. Your
-                  current report lives in this tab only.
+                  Nothing has been saved yet, or the backend could not be reached. Analyse an issue and press{' '}
+                  <span className="font-medium text-foreground">Save report</span> to store it.
                 </p>
                 <p>
-                  Use <span className="font-medium text-foreground">Connect reports API</span> to attempt a real request
-                  against <span className="font-mono text-xs">GET /reports</span>, or load labelled sample data to review
-                  the layout. Sample records and real records are never shown together.
+                  Use <span className="font-medium text-foreground">Connect reports API</span> to retry{' '}
+                  <span className="font-mono text-xs">GET /reports</span>, or load labelled sample data to review the
+                  layout. Sample records and real records are never shown together.
                 </p>
               </>
             }
@@ -296,9 +299,9 @@ export default function Dashboard() {
 
             <div className="sm:col-span-2">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Status vocabulary reserved for the future official workflow:{' '}
-                <span className="font-medium text-foreground">{REPORT_STATUSES.join(' · ')}</span>. Reports are never
-                moved between these states in this build, and no status change is simulated. Submission status, which
+                Status values:{' '}
+                <span className="font-medium text-foreground">{REPORT_STATUSES.join(' · ')}</span>. New reports start as Open; this build has no accounts, so
+                status is changed directly in the database. Submission status, which
                 you control yourself, is recorded on the assessment page only — CivicFix has no authority feed to
                 observe it for you.
               </p>

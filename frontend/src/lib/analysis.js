@@ -11,7 +11,11 @@ import { resolveSeverity } from '@/lib/severity'
  * integration can be corrected quickly.
  */
 
-/** Fields documented in the agreed API contract. */
+/**
+ * Fields returned by POST /analyze (backend/main.py: the CivicAnalysis model
+ * plus `location`, `model`, `estimate_status` and `authority_status`, which the
+ * backend attaches itself).
+ */
 export const KNOWN_ANALYSIS_FIELDS = [
   'issue_type',
   'is_civic_issue',
@@ -30,6 +34,7 @@ export const KNOWN_ANALYSIS_FIELDS = [
   'location',
   'estimate_status',
   'authority_status',
+  'model',
 ]
 
 export function isPlainObject(value) {
@@ -130,6 +135,7 @@ export function normalizeAnalysis(raw) {
     location: asText(source.location),
     estimateStatus: asText(source.estimate_status),
     authorityStatus: asText(source.authority_status),
+    modelName: asText(source.model),
     missingFields,
     unexpectedFields,
     presentFields,

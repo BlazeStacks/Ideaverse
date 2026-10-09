@@ -29,15 +29,30 @@ function makeSessionId() {
   return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+/** Random id generated once per analysis; the backend uses it to de-duplicate saves. */
+function makeClientRequestId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  // Fallback for non-secure contexts (plain http on a LAN address).
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0
+    return (char === 'x' ? random : (random & 0x3) | 0x8).toString(16)
+  })
+}
+
 export function AnalysisProvider({ children }) {
   const [state, setState] = useState({ status: 'idle', error: null, session: null })
   const [image, setImage] = useState({ previewUrl: null, name: null, size: null })
   const [complaint, setComplaint] = useState(null)
   const [submissionStatus, setSubmissionStatusState] = useState(SUBMISSION_STATUS.DRAFT)
   const [authoritySelection, setAuthoritySelectionState] = useState(null)
+  // The stored copy of this session's report, once the citizen has saved it.
+  const [savedReport, setSavedReport] = useState(null)
 
   const previewUrlRef = useRef(null)
   const activeRequestRef = useRef(null)
+  // Synchronous guard: state updates are asynchronous, so a double click or a
+  // double Enter could otherwise start two uploads before `isAnalyzing` flips.
+  const inFlightRef = useRef(false)
 
   const revokePreviewUrl = useCallback(() => {
     if (previewUrlRef.current) {
@@ -65,12 +80,14 @@ export function AnalysisProvider({ children }) {
   const reset = useCallback(() => {
     activeRequestRef.current?.abort()
     activeRequestRef.current = null
+    inFlightRef.current = false
     revokePreviewUrl()
     setImage({ previewUrl: null, name: null, size: null })
     setState({ status: 'idle', error: null, session: null })
     setComplaint(null)
     setSubmissionStatusState(SUBMISSION_STATUS.DRAFT)
     setAuthoritySelectionState(null)
+    setSavedReport(null)
   }, [revokePreviewUrl])
 
   useEffect(() => () => revokePreviewUrl(), [revokePreviewUrl])
@@ -99,15 +116,32 @@ export function AnalysisProvider({ children }) {
       followUpAnswers = {},
       coordinates = null,
     }) => {
-      activeRequestRef.current?.abort()
+      if (inFlightRef.current) {
+        return {
+          ok: false,
+          error: {
+            message: 'An analysis is already running. Please wait for it to finish.',
+            code: API_ERROR_CODES.DUPLICATE,
+            status: null,
+            detail: null,
+          },
+        }
+      }
+      inFlightRef.current = true
+
       const controller = new AbortController()
       activeRequestRef.current = controller
+      // True only while this request is still the active one. `reset()` clears
+      // the ref and a newer request replaces it, so a late response from an
+      // abandoned request can never overwrite the state of the current one.
+      const isCurrent = () => activeRequestRef.current === controller
 
       setPreviewImage(file)
       setState({ status: 'loading', error: null, session: null })
       setComplaint(null)
       setSubmissionStatusState(SUBMISSION_STATUS.DRAFT)
       setAuthoritySelectionState(null)
+      setSavedReport(null)
 
       const chosenCategoryId =
         categoryId && categoryId !== AI_DECIDE_CATEGORY_ID ? categoryId : null
@@ -116,15 +150,11 @@ export function AnalysisProvider({ children }) {
       )
 
       try {
+        // The backend reads `file`, `location` and `additional_details` only.
+        // The category and coordinates stay in `request` below for the
+        // complaint draft and authority guidance, which run in the browser.
         const { payload, receivedAt } = await analyzeIssue(
-          {
-            file,
-            location,
-            additionalDetails,
-            // "Let the AI decide" is never sent as a category.
-            issueCategory: chosenCategoryId,
-            coordinates,
-          },
+          { file, location, additionalDetails },
           { signal: controller.signal },
         )
 
@@ -145,9 +175,21 @@ export function AnalysisProvider({ children }) {
           },
         })
 
+        if (!isCurrent()) {
+          return {
+            ok: false,
+            error: {
+              message: 'The request was cancelled before it completed.',
+              code: API_ERROR_CODES.ABORTED,
+              status: null,
+              detail: null,
+            },
+          }
+        }
+
         // The id identifies this session for the complaint draft and for the
         // opt-in, user-declared submission status.
-        const sessionWithId = { ...session, id: makeSessionId() }
+        const sessionWithId = { ...session, id: makeSessionId(), clientRequestId: makeClientRequestId() }
         setState({ status: 'success', error: null, session: sessionWithId })
         return { ok: true, session: sessionWithId }
       } catch (error) {
@@ -162,8 +204,16 @@ export function AnalysisProvider({ children }) {
               }
 
         const cancelled = normalized.code === API_ERROR_CODES.ABORTED
-        setState({ status: cancelled ? 'idle' : 'error', error: cancelled ? null : normalized, session: null })
+        // Ignore the outcome of a request that is no longer the active one.
+        if (isCurrent()) {
+          setState({ status: cancelled ? 'idle' : 'error', error: cancelled ? null : normalized, session: null })
+        }
         return { ok: false, error: normalized }
+      } finally {
+        if (activeRequestRef.current === controller) {
+          activeRequestRef.current = null
+          inFlightRef.current = false
+        }
       }
     },
     [setPreviewImage],
@@ -259,6 +309,10 @@ export function AnalysisProvider({ children }) {
       authoritySelection,
       setAuthoritySelection,
 
+      // Saved copy (Supabase)
+      savedReport,
+      setSavedReport,
+
       // Submission status
       submissionStatus,
       setSubmissionStatus,
@@ -278,6 +332,7 @@ export function AnalysisProvider({ children }) {
       updateComplaintDraft,
       authoritySelection,
       setAuthoritySelection,
+      savedReport,
       submissionStatus,
       setSubmissionStatus,
       runAnalysis,

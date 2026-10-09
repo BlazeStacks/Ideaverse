@@ -12,7 +12,7 @@ const SOURCE_STATE = {
   [REPORTS_DATA_SOURCE.NONE]: {
     label: 'No report data source connected',
     detail:
-      'Stored reports require a backend reports endpoint, which does not exist yet. The interface below is complete and will render real records as soon as it does.',
+      'Press Connect reports API to load saved reports from the backend.',
     Icon: Link2Off,
     className: 'text-slate-600',
   },
@@ -24,7 +24,7 @@ const SOURCE_STATE = {
   },
   [REPORTS_DATA_SOURCE.API]: {
     label: 'Connected to the reports API',
-    detail: 'Records were returned by the backend reports endpoint.',
+    detail: 'Records were returned by the backend (stored in Supabase).',
     Icon: Database,
     className: 'text-emerald-700',
   },
@@ -116,7 +116,7 @@ export function ReportsSourcePanel({
           >
             <p>{error.message}</p>
             <p className="text-xs">
-              This is expected until the backend exposes report storage. Nothing was substituted in its place.
+              Check that the backend is running and Supabase is configured in backend/.env. Nothing was substituted in its place.
               {typeof error.status === 'number' ? ` (HTTP ${error.status})` : ''}
             </p>
           </Alert>

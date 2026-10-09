@@ -28,6 +28,7 @@ import { CategoryConfirmation } from '@/components/reports/CategoryConfirmation'
 import { ComplaintEditor } from '@/components/reports/ComplaintEditor'
 import { DetailListCard } from '@/components/reports/DetailListCard'
 import { EstimateCard } from '@/components/reports/EstimateCard'
+import { SaveReportCard } from '@/components/reports/SaveReportCard'
 import { ResourceList } from '@/components/reports/ResourceList'
 import { AuthorityStatusBadge } from '@/components/reports/StatusBadge'
 import { SubmissionStatusPanel } from '@/components/reports/SubmissionStatusPanel'
@@ -362,6 +363,9 @@ export default function ReportResults() {
           />
         </section>
 
+        {/* Save to Supabase ------------------------------------------- */}
+        <SaveReportCard categoryId={effectiveCategoryId} />
+
         {/* E. Prepare your complaint ----------------------------------- */}
         <section aria-labelledby="section-complaint" className="scroll-mt-24 space-y-4">
           <div className="flex items-center gap-2">
@@ -447,10 +451,6 @@ export default function ReportResults() {
                 <span className="font-mono text-xs">{analysis.unexpectedFields.join(', ')}</span>
               </p>
             ) : null}
-            <p className="text-xs">
-              These notes exist so the frontend and backend can be aligned quickly. Missing fields are rendered as
-              &ldquo;not reported&rdquo; above, never as zero or as a default value.
-            </p>
           </Alert>
         ) : null}
 

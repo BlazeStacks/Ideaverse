@@ -46,8 +46,7 @@ export function AnalysisRawPanel({ payload, className }) {
 
       <div className="space-y-3 border-t border-border p-4 sm:p-5">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Exactly what the backend returned, unmodified. Use this when checking the response schema during backend
-          integration.
+          Exactly what the analysis service returned, unmodified.
         </p>
         <pre className="max-h-80 overflow-auto rounded-lg bg-navy p-4 text-xs leading-relaxed text-navy-foreground">
           <code>{serialized}</code>

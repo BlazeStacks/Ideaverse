@@ -1,16 +1,14 @@
 /**
  * CivicFix AI — reports data access
  * ==========================================================================
- * Analysis and storage are separate capabilities. POST /analyze produces an
- * assessment; it does NOT create a stored report unless the backend says so.
+ * Saved reports live in Supabase, but the browser never talks to Supabase:
+ * everything goes through the FastAPI backend.
  *
- * This module is the only place the dashboard reads report data from, so the
- * presentation layer never has to change when real endpoints arrive.
+ *   POST /reports        save a report (idempotent per `client_request_id`)
+ *   GET  /reports        list saved reports (newest first)
  *
- * Current state of the backend contract: report retrieval is NOT implemented.
- * `fetchReports()` performs a real request and surfaces the real failure; the
- * dashboard then shows an honest empty state. `getDemoReports()` returns
- * clearly labelled sample data for interface preview only.
+ * `getDemoReports()` (bottom of this file) returns clearly labelled sample data
+ * for the dashboard preview only. The Issue Map never uses it.
  */
 
 import { getCategoryLabel } from '@/config/issueCategories'
@@ -28,75 +26,94 @@ export const REPORTS_DATA_SOURCE = {
   DEMO: 'demo',
 }
 
-/**
- * Set to `true` only once the backend actually stores and returns reports.
- * The UI copy is derived from this flag.
- */
-export const REPORTS_STORAGE_AVAILABLE = false
+/** Reports are stored by the backend (Supabase). */
+export const REPORTS_STORAGE_AVAILABLE = true
 
 export const REPORTS_NOT_AVAILABLE_MESSAGE =
-  'Stored reports are not available yet. The agreed backend contract currently exposes only POST /analyze, ' +
-  'which returns an assessment without saving it. Once a reports endpoint exists, this dashboard connects to it without interface changes.'
+  'Saved reports could not be loaded. Check that the backend is running and that SUPABASE_URL and SUPABASE_SECRET_KEY are set in backend/.env.'
+
+/** Map a stored row (snake_case) to the shape the dashboard and map use. */
+export function normalizeStoredReport(row) {
+  const latitude = Number.isFinite(Number(row?.latitude)) && row?.latitude !== null ? Number(row.latitude) : null
+  const longitude = Number.isFinite(Number(row?.longitude)) && row?.longitude !== null ? Number(row.longitude) : null
+  const hasCoordinates =
+    latitude !== null && longitude !== null && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+
+  return {
+    id: row.id,
+    issueType: row.issue_type ?? null,
+    category: row.issue_category ?? null,
+    description: row.description ?? '',
+    severity: row.severity ?? null,
+    confidence: typeof row.confidence === 'number' ? row.confidence : null,
+    status: row.status ?? 'Open',
+    location: row.location ?? '',
+    reportedAt: row.created_at ?? null,
+    recommendedActions: Array.isArray(row.recommended_actions) ? row.recommended_actions : [],
+    suggestedDepartment: row.suggested_department ?? null,
+    costMin: row.estimated_cost_min ?? null,
+    costMax: row.estimated_cost_max ?? null,
+    durationMinHours: row.estimated_duration_min_hours ?? null,
+    durationMaxHours: row.estimated_duration_max_hours ?? null,
+    latitude: hasCoordinates ? latitude : null,
+    longitude: hasCoordinates ? longitude : null,
+    hasCoordinates,
+    needsInspection: null,
+    submissionStatus: null,
+    isDemo: false,
+    source: 'api',
+  }
+}
 
 /**
- * Attempt to retrieve stored reports.
- *
- * Performs a real `GET {VITE_API_URL}/reports`. It is expected to fail today;
- * the thrown `ApiError` describes the real outcome. Nothing is substituted.
- *
+ * Retrieve saved reports from the backend.
  * @param {{ signal?: AbortSignal, timeoutMs?: number }} [options]
  * @returns {Promise<{ reports: Array<object>, source: string }>}
  */
-export async function fetchReports({ signal, timeoutMs = 8000 } = {}) {
+export async function fetchReports({ signal, timeoutMs = 10000 } = {}) {
   try {
     const { data } = await apiRequest(REPORTS_ENDPOINT, { method: 'GET', signal, timeoutMs })
 
     const list = Array.isArray(data) ? data : Array.isArray(data?.reports) ? data.reports : null
     if (!list) {
-      throw new ApiError(
-        'The reports endpoint responded with a body that is not a list of reports. Expected an array or an object with a "reports" array.',
-        { code: API_ERROR_CODES.UNEXPECTED_SCHEMA, url: `${API_BASE_URL}${REPORTS_ENDPOINT}` },
-      )
+      throw new ApiError('The reports endpoint responded with a body that is not a list of reports.', {
+        code: API_ERROR_CODES.UNEXPECTED_SCHEMA,
+        url: `${API_BASE_URL}${REPORTS_ENDPOINT}`,
+      })
     }
 
-    return { reports: list.map((entry) => ({ ...entry, isDemo: false })), source: REPORTS_DATA_SOURCE.API }
+    return { reports: list.map(normalizeStoredReport), source: REPORTS_DATA_SOURCE.API }
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      throw new ApiError(REPORTS_NOT_AVAILABLE_MESSAGE, {
-        code: API_ERROR_CODES.HTTP,
-        status: 404,
-        url: error.url,
-        detail: 'The reports endpoint does not exist yet.',
-      })
-    }
-    if (error instanceof ApiError && error.status === 501) {
-      throw new ApiError(REPORTS_NOT_AVAILABLE_MESSAGE, {
-        code: API_ERROR_CODES.HTTP,
-        status: 501,
-        url: error.url,
-        detail: 'The reports endpoint is declared but not implemented.',
-      })
-    }
     if (error instanceof ApiError) throw error
-    throw new ApiError(REPORTS_NOT_AVAILABLE_MESSAGE, { code: API_ERROR_CODES.NETWORK, url: `${API_BASE_URL}${REPORTS_ENDPOINT}` })
+    throw new ApiError(REPORTS_NOT_AVAILABLE_MESSAGE, {
+      code: API_ERROR_CODES.NETWORK,
+      url: `${API_BASE_URL}${REPORTS_ENDPOINT}`,
+    })
   }
 }
 
 /**
- * Fetch a single stored report. Not implemented on the backend yet.
- * @param {string} reportId
+ * Save a report. Safe to repeat: the backend de-duplicates on
+ * `client_request_id`, so a double click or retry never creates a second row.
+ *
+ * @param {object} payload Body built by `buildSaveReportPayload`.
+ * @returns {Promise<{ report: object, created: boolean }>}
  */
-export async function fetchReportById(reportId) {
-  return fetchReports().then(({ reports }) => {
-    const match = reports.find((report) => String(report.id ?? report.report_id) === String(reportId))
-    if (!match) {
-      throw new ApiError(`The reports endpoint returned no report with id "${reportId}".`, {
-        code: API_ERROR_CODES.UNEXPECTED_SCHEMA,
-        url: `${API_BASE_URL}${REPORTS_ENDPOINT}/${reportId}`,
-      })
-    }
-    return match
+export async function saveReport(payload, { signal } = {}) {
+  const { data } = await apiRequest(REPORTS_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    timeoutMs: 15000,
   })
+  if (!data?.report) {
+    throw new ApiError('The server saved nothing recognisable. Please try again.', {
+      code: API_ERROR_CODES.UNEXPECTED_SCHEMA,
+      url: `${API_BASE_URL}${REPORTS_ENDPOINT}`,
+    })
+  }
+  return { report: normalizeStoredReport(data.report), created: data.created !== false }
 }
 
 /* -------------------------------------------------------------------------- */

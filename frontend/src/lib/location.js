@@ -1,17 +1,29 @@
 /**
  * Location helpers.
  *
- * The documented backend contract has a single free-text `location` field, so a
- * landmark is folded into that text instead of inventing a new required field.
- * Coordinates are only ever carried as the opt-in proposed fields.
+ * The backend has a single free-text `location` field and no coordinate fields,
+ * so a landmark is folded into that text. Captured coordinates are sent only
+ * when they are the citizen's only description of the place (no typed address);
+ * otherwise they stay in the browser.
  */
 
-/** Compose the single location string sent to the backend. */
-export function composeLocationText({ location, landmark } = {}) {
-  const base = typeof location === 'string' ? location.trim() : ''
+/**
+ * Compose the single location string sent to the backend.
+ * Falls back to the captured coordinates when no address text was typed.
+ */
+export function composeLocationText({ location, landmark, coordinates } = {}) {
+  const typed = typeof location === 'string' ? location.trim() : ''
   const near = typeof landmark === 'string' ? landmark.trim() : ''
+  const formatted = isValidCoordinates(coordinates) ? formatCoordinates(coordinates) : null
+  const base = typed || (formatted ? `GPS coordinates ${formatted}` : '')
   if (base && near) return `${base} — near ${near}`
   return base || near || ''
+}
+
+/** True when the submitted location text is built from coordinates alone. */
+export function locationComesFromCoordinates({ location, coordinates } = {}) {
+  const typed = typeof location === 'string' ? location.trim() : ''
+  return !typed && isValidCoordinates(coordinates)
 }
 
 /** Human-readable coordinates, rounded for display. */
@@ -28,7 +40,7 @@ export function describeCoordinates(coordinates, accuracyMeters) {
   if (!formatted) return null
   const accuracy =
     typeof accuracyMeters === 'number' && accuracyMeters > 0 ? ` Reported accuracy about ±${accuracyMeters} m.` : ''
-  return `${formatted}.${accuracy} Device location is a hint, not an address: it does not say which side of the road the problem is on, and it is not published anywhere.`
+  return `${formatted}.${accuracy} Device location is a hint, not an address: it does not say which side of the road the problem is on. The coordinates are stored and shown on the public Issue Map only if you save the report.`
 }
 
 /** True when the captured coordinates look like a usable pair. */

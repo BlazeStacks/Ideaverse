@@ -1,6 +1,5 @@
 import { BadgeCheck, CircleX, Info } from 'lucide-react'
 
-import { BackendDependencyPanel } from '@/components/reports/BackendDependencyPanel'
 import { Container } from '@/components/ui/container'
 
 const IS_LIST = [
@@ -107,27 +106,12 @@ export function TransparencySection() {
               Your report is yours
             </p>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--color-primary)' }}>
-              Photographs are never stored in your browser and never published. Coordinates are only
-              shown to you for review. Nothing is sent anywhere except the single analysis request
-              to the backend.
+              Photographs are never stored in your browser and never published. Your photograph, location
+              text and notes go to the CivicFix backend in a single analysis request, and the backend
+              passes them to its AI provider (Groq) to produce the assessment. Captured coordinates
+              stay in your browser unless they are the only location you give.
             </p>
           </div>
-        </div>
-
-        {/* Feature status */}
-        <div className="space-y-4">
-          <p
-            className="flex items-center gap-2 text-sm font-medium text-foreground"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            <Info aria-hidden="true" className="size-4" style={{ color: 'var(--color-primary)' }} />
-            Current build status, feature by feature
-          </p>
-          <BackendDependencyPanel
-            title="Available now and awaiting backend support"
-            description="Anything listed as awaiting support is designed but inert, and never simulated."
-            headingLevel="h3"
-          />
         </div>
       </Container>
     </section>

@@ -8,6 +8,7 @@ import {
   MIN_LOCATION_LENGTH,
 } from '@/lib/constants'
 import { formatFileSize } from '@/lib/format'
+import { isValidCoordinates } from '@/lib/location'
 
 /** Lower-case file extension for a file name, including the dot. */
 export function getFileExtension(fileName) {
@@ -92,10 +93,11 @@ export function validateImageFile(file) {
  *   location?: string,
  *   landmark?: string,
  *   additionalDetails?: string,
+ *   coordinates?: { latitude: number, longitude: number }|null,
  * }} values
  * @returns {{ valid: boolean, errors: Record<string, string>, firstError: string|null }}
  */
-export function validateReportForm({ file, location, landmark = '', additionalDetails = '' } = {}) {
+export function validateReportForm({ file, location, landmark = '', additionalDetails = '', coordinates = null } = {}) {
   /** @type {Record<string, string>} */
   const errors = {}
 
@@ -103,8 +105,11 @@ export function validateReportForm({ file, location, landmark = '', additionalDe
   if (!fileResult.valid) errors.file = fileResult.error
 
   const trimmedLocation = typeof location === 'string' ? location.trim() : ''
+  // Captured GPS coordinates are an accepted way to say where the issue is.
   if (!trimmedLocation) {
-    errors.location = 'Enter the location of the issue, for example a street or area name.'
+    if (!isValidCoordinates(coordinates)) {
+      errors.location = 'Enter the location of the issue, for example a street or area name, or use your location.'
+    }
   } else if (trimmedLocation.length < MIN_LOCATION_LENGTH) {
     errors.location = `Use at least ${MIN_LOCATION_LENGTH} characters so the location is identifiable.`
   } else if (trimmedLocation.length > MAX_LOCATION_LENGTH) {

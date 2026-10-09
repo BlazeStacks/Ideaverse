@@ -5,8 +5,8 @@ import { BACKEND_DEPENDENCIES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 /**
- * Explicit boundary between what this frontend implements and what still
- * depends on the separately developed backend.
+ * Explicit boundary between what is implemented today and what still needs
+ * backend support that does not exist yet.
  *
  * @param {{
  *   title?: string,
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
  */
 export function BackendDependencyPanel({
   title = 'What runs today, and what still needs the backend',
-  description = 'This interface is built independently of the backend. Everything below is accurate about the current state of the build.',
+  description = 'Everything below is accurate about the current state of the build.',
   capabilities = BACKEND_DEPENDENCIES,
   headingLevel = 'h3',
   className,

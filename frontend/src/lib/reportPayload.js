@@ -1,18 +1,23 @@
-import { getFollowUpQuestions } from '@/config/issueCategories'
+import { getCategoryLabel, getFollowUpQuestions } from '@/config/issueCategories'
 import { composeLocationText, isValidCoordinates } from '@/lib/location'
+import { BACKEND_TEXT_LIMITS } from '@/lib/constants'
 
 /**
- * Shape a report into the request the backend expects.
+ * Shape a report into the three text/file fields the backend reads.
  *
- * The documented contract has three fields — `file`, `location`,
- * `additional_details` — and this module keeps them working while folding the
- * new UI into them:
+ * The backend accepts `file`, `location` and `additional_details` only, so the
+ * rest of the form is carried honestly inside those fields as plain text:
  *
- *  - the location text and the landmark become one `location` string;
- *  - the optional per-category answers are appended to `additional_details` as a
- *    short structured block, because there is no field for them;
- *  - the chosen category and captured coordinates are passed through separately
- *    as the opt-in proposed fields (see `PROPOSED_ANALYZE_FIELDS`).
+ *  - location text and landmark become one `location` string; captured
+ *    coordinates are used there only when no address was typed;
+ *  - the citizen's own notes come first in `additional_details`, followed by
+ *    the category they chose (never "let the AI decide") and any answered
+ *    follow-up questions, as short labelled lines;
+ *  - whole lines are dropped, never cut mid-sentence, if the structured block
+ *    would push the text past the backend's read limit.
+ *
+ * Coordinates and the chosen category are also returned separately for the
+ * complaint draft and authority guidance, which run in the browser.
  *
  * @param {{
  *   file: File,
@@ -44,23 +49,50 @@ export function buildReportSubmission({
     .filter(Boolean)
 
   const userDetails = typeof additionalDetails === 'string' ? additionalDetails.trim() : ''
+  const validCoordinates = isValidCoordinates(coordinates) ? coordinates : null
+
+  // Structured lines, most useful first.
+  const structured = []
+  if (categoryIsUserChosen && categoryId) {
+    structured.push(`Category chosen by the citizen: ${getCategoryLabel(categoryId)}`)
+  }
+  if (answered.length) {
+    structured.push('Additional details recorded from the reporting form:', ...answered)
+  }
+
+  // Keep whole lines within the backend's read limit; the citizen's own words
+  // are never truncated here (the form already caps them below the limit).
+  const limit = BACKEND_TEXT_LIMITS.additionalDetails
+  const separator = userDetails ? 2 : 0 // "\n\n" between notes and the block
+  let budget = limit - userDetails.length - separator
+  const keptLines = []
+  for (const line of structured) {
+    const cost = line.length + (keptLines.length ? 1 : 0)
+    if (cost > budget) break
+    keptLines.push(line)
+    budget -= cost
+  }
+
   const sections = []
   if (userDetails) sections.push(userDetails)
-  if (answered.length) {
-    sections.push(['Additional details recorded from the reporting form:', ...answered].join('\n'))
-  }
+  if (keptLines.length) sections.push(keptLines.join('\n'))
+
+  const submittedLocation = composeLocationText({ location, landmark, coordinates: validCoordinates })
 
   return {
     file,
-    // Documented field: location + landmark combined into one readable string.
-    location: composeLocationText({ location, landmark }),
-    // Documented field: the citizen's own notes first, then the extra answers.
+    // Backend field `location` (at most BACKEND_TEXT_LIMITS.location read).
+    location: submittedLocation.slice(0, BACKEND_TEXT_LIMITS.location),
+    // Backend field `additional_details`.
     additionalDetails: sections.join('\n\n'),
-    // Proposed fields — sent only when they carry a real value.
+    // Browser-side only: used by the complaint draft and authority guidance.
     issueCategory: categoryIsUserChosen ? categoryId : null,
-    coordinates: isValidCoordinates(coordinates) ? coordinates : null,
-    // Kept for the complaint draft, which lists the two parts separately.
+    coordinates: validCoordinates,
     userDetails: userDetails || null,
-    followUpAnswers: Object.fromEntries(answered.length ? Object.entries(followUpAnswers).filter(([, value]) => value) : []),
+    followUpAnswers: Object.fromEntries(
+      answered.length ? Object.entries(followUpAnswers).filter(([, value]) => value) : [],
+    ),
+    // True when the chosen category line made it into `additional_details`.
+    categorySent: Boolean(categoryIsUserChosen && categoryId && keptLines[0]?.startsWith('Category chosen')),
   }
 }

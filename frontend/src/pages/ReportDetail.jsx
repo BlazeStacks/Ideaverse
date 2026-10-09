@@ -41,7 +41,7 @@ export default function ReportDetail() {
         <PageHeader
           eyebrow="Report detail"
           title={`Report ${formatReportId(reportId)}`}
-          description="This page renders a single stored report. Report storage is not implemented yet."
+          description="This page renders a single saved report opened from the dashboard."
         />
         <Container className="py-10">
           <EmptyState
@@ -50,17 +50,8 @@ export default function ReportDetail() {
             description={
               <>
                 <p>
-                  Report records are not persisted anywhere yet, so there is no stored record to open from a link — and
-                  nothing is loaded from your browser either.
-                </p>
-                <p>
-                  The dashboard can still show labelled demo records for layout review. Opening one of those carries the
-                  record with the navigation; reloading this page clears it.
-                </p>
-                <p className="text-xs">
-                  When the backend exposes a stored-reports endpoint, connect it in{' '}
-                  <span className="font-mono">src/services/reportsService.js</span> and this view will load real records
-                  by id.
+                  This view is opened from a row on the dashboard, which carries the record along with the navigation.
+                  Reloading this page clears it, so go back to the dashboard and open the report again.
                 </p>
               </>
             }
@@ -179,7 +170,7 @@ export default function ReportDetail() {
             <CardHeader>
               <CardTitle as="h2">Available actions</CardTitle>
               <CardDescription>
-                Workflow actions stay disabled until the backend can store the change. Nothing here writes data.
+                Workflow actions are shown for reference and are not available in this demo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

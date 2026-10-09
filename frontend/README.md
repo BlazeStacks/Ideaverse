@@ -4,14 +4,13 @@ Frontend for **CivicFix AI**, a civic infrastructure reporting and repair-planni
 
 Citizens submit a photograph of a public-infrastructure problem (pothole, blocked drain, visible water
 leak, damaged traffic signal, garbage accumulation, damaged footpath, other civic assets) together with a
-location. An AI service — developed **separately**, on another machine — returns a structured assessment
+location. The CivicFix backend (`../backend`, FastAPI + a Groq vision model) returns a structured assessment
 that this interface renders: issue category, severity, confidence, observations, safety concerns, a
 suggested department, corrective actions, preliminary resource/cost/duration guidance, missing information
 and submission status.
 
-> **Scope of this build:** the frontend only. There is no backend, no AI inference and no database code in
-> this directory. Everything that depends on the backend is implemented as an explicit integration point,
-> and the interface is honest about what is not available yet.
+> **Scope of this directory:** the frontend only. There is no AI inference and no database code here. The
+> app talks to the backend over HTTP (`POST /analyze`, `POST/GET /reports`).
 
 ---
 
@@ -41,26 +40,26 @@ cp .env.example .env.local     # optional; see Environment variables
 npm run dev                    # http://localhost:5173
 ```
 
-The application runs completely without the backend. Report submission, the results page and the
-dashboard all have honest error and empty states, so nothing needs to be stubbed to develop or review the
-interface.
+The pages load without the backend, but analysing a report needs it running (see the root README for
+`uvicorn main:app --port 8000` and the `GROQ_API_KEY` it requires). If it is not running, submission shows
+the real network error and the form keeps your input; nothing is stubbed.
 
 ---
 
 ## Environment variables
 
-Only one variable is required, and it is optional:
+Only one variable is used, and it is optional:
 
 | Variable       | Example                 | Purpose                                        |
 | -------------- | ----------------------- | ---------------------------------------------- |
-| `VITE_API_URL` | `http://localhost:8000` | Base URL of the separately developed backend.   |
+| `VITE_API_URL` | `http://localhost:8000` | Base URL of the CivicFix backend.               |
 
 - Copy [`.env.example`](.env.example) to `.env.local` and edit it. `.env*` files are git-ignored;
   `.env.example` is committed on purpose.
 - If `VITE_API_URL` is not set, the app falls back to `http://localhost:8000` and says so in the UI.
 - **Never put secrets here.** Vite inlines every `VITE_`-prefixed variable into the browser bundle, so
-  anything in `.env` is public. The Groq API key, database credentials and any other privileged token
-  belong exclusively to the backend environment. The frontend reaches the backend over HTTP only.
+  anything in `.env` is public. The Groq API key belongs exclusively to `backend/.env`. The frontend
+  reaches the backend over HTTP only.
 
 ---
 
@@ -135,25 +134,28 @@ Everything the frontend needs from the backend lives in two files:
 
 - **[`src/services/civicfixApi.js`](src/services/civicfixApi.js)** — base URL configuration, the
   `POST /analyze` request, HTTP error handling, response parsing and the documented extension points.
-- **[`src/services/reportsService.js`](src/services/reportsService.js)** — report retrieval (not available
-  yet) and the clearly labelled demo dataset used for interface previews.
+- **[`src/services/reportsService.js`](src/services/reportsService.js)** — saving and loading reports through
+  the backend, plus the clearly labelled demo dataset used for interface previews.
 
 ### Request contract
 
-`POST {VITE_API_URL}/analyze` — `multipart/form-data`:
+`POST {VITE_API_URL}/analyze` — `multipart/form-data`, verified against `backend/main.py`:
 
-| Field                | Type   | Notes                                            |
-| -------------------- | ------ | ------------------------------------------------ |
-| `file`               | File   | JPEG, PNG or WEBP, max 8 MB (validated in-browser). |
-| `location`           | string | Free text entered by the citizen.                |
-| `additional_details` | string | Optional; empty string when nothing was entered. |
+| Field                | Type   | Notes                                                                 |
+| -------------------- | ------ | --------------------------------------------------------------------- |
+| `file`               | File   | JPEG, PNG or WEBP, max 8 MB (also validated in-browser).              |
+| `location`           | string | Typed location plus landmark; GPS coordinates only if nothing was typed. Backend reads 500 chars. |
+| `additional_details` | string | The citizen's notes, then the chosen category and follow-up answers as text. Backend reads 1500 chars. |
 
-`Content-Type` is deliberately **not** set by the frontend: the browser attaches the multipart boundary.
-The request is sent with a 90-second timeout and can be cancelled by the caller.
+The backend has no category or coordinate fields, so none are sent (see
+[`src/lib/reportPayload.js`](src/lib/reportPayload.js) for exactly how they are folded into text, and
+[`src/services/civicfixApi.js`](src/services/civicfixApi.js) for the request). `Content-Type` is deliberately
+**not** set by the frontend: the browser attaches the multipart boundary. The request has a 90-second
+timeout and can be cancelled. A second submit while one is running is ignored.
 
-The agreed (illustrative) response shape is documented in
-[`src/lib/analysis.js`](src/lib/analysis.js). Any field may be missing or `null`; the normaliser handles
-that and the results page reports exactly which fields were absent.
+The response shape is documented in the root README and normalised by
+[`src/lib/analysis.js`](src/lib/analysis.js). Any field may be missing or `null`; the normaliser handles that
+and the results page reports exactly which fields were absent.
 
 ### How responses are handled
 
@@ -179,18 +181,18 @@ that and the results page reports exactly which fields were absent.
 | `unexpected_schema`             | JSON, but not an object matching the documented shape.  |
 | `validation_error`              | Blocked in the frontend before any upload.              |
 | `aborted`                       | Cancelled before completion.                            |
+| `duplicate_submission`          | A request was already running; the second was ignored.  |
 
-### Probe endpoint (optional)
+### Probe endpoint
 
-`GET {VITE_API_URL}/health` is used only by the **Test backend connection** button on the report page.
-A 404 there means "reachable but no health route", which is reported as such — the documented contract
-only guarantees `POST /analyze`.
+`GET {VITE_API_URL}/health` is used only by the **Test backend connection** button on the report page. It
+confirms the server is up; it does not test the Groq key or model.
 
 ### CORS
 
-CORS is the backend's responsibility. Allow the frontend origin (for example `http://localhost:5173` for
-development, and the deployed Vercel domain for preview/production). Do not add a proxy layer to work
-around it; that hides the real configuration problem.
+CORS is the backend's responsibility. It allows the origins in the backend's `CORS_ORIGINS` setting
+(default: Vite dev and preview ports on `localhost` / `127.0.0.1`). If Vite starts on another port, or you
+deploy to Vercel, add that origin there. Do not add a proxy layer to work around it.
 
 ### Authentication extension point
 
@@ -207,7 +209,8 @@ There is no login and none is simulated. `src/services/civicfixApi.js` documents
 - Landing page, navigation, footer, responsive layout, accessible focus states.
 - Reporting form: drag & drop, click-to-browse, preview, replace, remove, optional geolocation,
   client-side validation (type, size, location length, disclosure length), loading and error states.
-- `POST /analyze` integration through a single service module, with truthful failure reporting.
+- `POST /analyze` integration through a single service module, with truthful failure reporting and
+  duplicate-submission protection.
 - Results interface: category, severity (text + icon + scale), confidence, description, observations,
   safety concerns, suggested department, corrective actions, materials/equipment, cost and duration
   estimates, site-inspection flag, missing information, authority status, response-completeness notes and
@@ -215,14 +218,11 @@ There is no login and none is simulated. `src/services/civicfixApi.js` documents
 - Dashboard: summary cards, search, category/severity/status filters, table (desktop) and cards (mobile),
   detail navigation, empty/filtered/loading states, clearly labelled demo data.
 
-**Placeholder — deliberately not functional**
+**Out of scope**
 
-- Report persistence and report history (`GET /reports` does not exist yet).
 - Government/authority submission — never simulated; an analysis is not a complaint.
 - Jurisdiction routing — only the department suggested by the model is displayed.
-- Interactive incident map — no invented incidents are plotted.
-- Authentication, roles and administrative actions (assign, change status) — rendered as disabled with an
-  explanation.
+- Authentication, roles and administrative actions (assign, change status).
 
 ---
 
@@ -242,8 +242,8 @@ There is no login and none is simulated. `src/services/civicfixApi.js` documents
    `/report`, `/results` or `/dashboard/...` does not 404. Vercel checks the filesystem first, so hashed
    assets are still served normally.
 
-Local development keeps working with no backend deployed: the request simply fails, and the UI explains
-why.
+Deploy the backend separately and add the Vercel domain to its `CORS_ORIGINS`. Without a reachable
+backend the request fails and the UI explains why.
 
 ---
 
@@ -266,9 +266,12 @@ Checked locally with the dev server and a production build:
   data, working search/filters, detail navigation, and the honest "cannot be loaded" state on direct load.
 - Refresh behaviour on `/results` — explains that results are held in memory and were cleared.
 
-**Not verified:** the real backend integration. The AI backend was not available on this machine, so the
-`POST /analyze` request/response cycle was exercised against a temporary local HTTP stub that is not part
-of this repository. Confirm the actual schema with the backend before relying on it.
+**Verified after wiring to the real backend contract:** the request builder and response handling were
+checked in Node against a local stand-in server (exactly three multipart fields, multipart boundary, HTTP
+400/413/415/422/502 and non-JSON error bodies, timeout, abort, network failure, null cost/duration, the
+backend-added `model` field). **Not verified in this environment:** `npm run lint`, `npm run build`, and a real
+browser-to-backend request, because dependencies could not be installed and no `GROQ_API_KEY` was available.
+Run them locally before relying on the integration.
 
 ---
 

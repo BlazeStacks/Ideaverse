@@ -413,10 +413,6 @@ function FindAuthorityGuidance() {
           any reference number you are given — that is the only reliable proof of submission.
         </li>
       </ol>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        When the backend exposes a jurisdiction lookup service, CivicFix will be able to match a location to a specific
-        authority automatically. Until then, the directory stays small and hand-checked on purpose.
-      </p>
     </div>
   )
 }

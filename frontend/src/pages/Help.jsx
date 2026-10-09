@@ -77,7 +77,7 @@ const FAQS = [
   {
     question: 'What happens to my photograph and location?',
     answer: [
-      'They are sent once to the analysis service to produce the assessment. CivicFix does not store photographs in your browser or publish them, and it does not save reports. Results stay in the open tab and are cleared when you refresh.',
+      'They are sent once to the analysis service to produce the assessment. CivicFix does not store photographs in your browser or publish them, and it saves a report only when you press Save report on the results page.',
       'Avoid including personal information you do not want analysed.',
     ],
     links: [{ label: 'Privacy and limitations', to: '/about#privacy' }],
@@ -86,7 +86,7 @@ const FAQS = [
     question: 'Can I track whether an authority has resolved my complaint?',
     answer: [
       'Not through CivicFix. It cannot see authority portals, acknowledgements or repair progress, and it does not receive status updates from any government body. Keep the reference number the authority gives you and follow up through their own channel.',
-      'The dashboard does not show real report history yet, and any sample data on it is labelled as demo data.',
+      'The dashboard shows the reports you have saved. Any sample data on it is labelled as demo data.',
     ],
   },
 ]

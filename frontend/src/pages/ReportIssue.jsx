@@ -1,22 +1,17 @@
 import {
+  Check,
   CircleCheckBig,
-  Database,
-  HardDriveUpload,
-  Info,
-  Layers,
   Loader2,
-  MessageSquarePlus,
   RotateCcw,
   ScanSearch,
-  Send,
   ServerCrash,
+  ShieldCheck,
   TriangleAlert,
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { BackendDependencyPanel } from '@/components/reports/BackendDependencyPanel'
 import { CategoryFollowUps } from '@/components/reports/CategoryFollowUps'
 import { CategoryPicker } from '@/components/reports/CategoryPicker'
 import { ImageDropzone } from '@/components/reports/ImageDropzone'
@@ -33,17 +28,70 @@ import { AI_DECIDE_CATEGORY_ID, getIssueCategory } from '@/config/issueCategorie
 import { useAnalysisSession } from '@/context/AnalysisContext'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { MAX_DETAILS_LENGTH } from '@/lib/constants'
-import { formatFileSize } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { buildReportSubmission } from '@/lib/reportPayload'
 import { validateReportForm } from '@/lib/validation'
 import {
   API_BASE_URL,
   API_ERROR_CODES,
-  analyzeUrl,
-  checkBackendHealth,
-  describeAnalyzeFields,
-  isApiUrlConfigured,
 } from '@/services/civicfixApi'
+
+/** One numbered form section; the number turns into a tick once the step is complete. */
+function StepCard({ number, done, title, description, optional = false, children }) {
+  return (
+    <Card className="gap-5">
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+              done ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground',
+            )}
+          >
+            {done ? <Check className="size-4" /> : number}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <CardTitle as="h2" className="flex flex-wrap items-center gap-2 text-lg">
+              {title}
+              {optional ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  Optional
+                </span>
+              ) : null}
+              {done ? <span className="sr-only">(completed)</span> : null}
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">{children}</CardContent>
+    </Card>
+  )
+}
+
+/** What the backend's HTTP status codes mean for this form (see backend/main.py). */
+function describeHttpHint(status) {
+  switch (status) {
+    case 400:
+      return 'The backend could not read that file as an image. Choose a different photograph and try again.'
+    case 413:
+      return 'The backend rejected the image as too large (over 8 MB, or more than 50 megapixels). Choose a smaller photograph.'
+    case 415:
+      return 'The backend only accepts JPEG, PNG or WEBP images.'
+    case 422:
+      return 'The backend rejected the submitted fields. Check that a photograph is attached.'
+    case 429:
+      return 'The AI provider is rate limiting requests. Wait a minute and try again.'
+    case 503:
+    case 504:
+      return 'The AI provider could not be reached in time. Nothing was analysed. Try again in a moment.'
+    case 502:
+      return 'The AI service did not return a usable assessment (an invalid answer, a rate limit or a provider problem). Nothing was analysed. Try again in a moment.'
+    default:
+      return 'The backend returned an error status. The message above is what it reported.'
+  }
+}
 
 /** Extra guidance per API failure code. */
 function describeApiError(error) {
@@ -54,7 +102,7 @@ function describeApiError(error) {
     case API_ERROR_CODES.NETWORK:
       return {
         ...base,
-        hint: `Confirm the backend is running at ${API_BASE_URL} and that it allows CORS requests from ${origin}. Your photograph and details stay in the form, so you can retry once it is available.`,
+        hint: `Confirm the backend is running at ${API_BASE_URL} and that CORS_ORIGINS in backend/.env includes ${origin}. Your photograph and details stay in the form, so you can retry once it is available.`,
       }
     case API_ERROR_CODES.TIMEOUT:
       return {
@@ -62,18 +110,12 @@ function describeApiError(error) {
         hint: 'Large images and first-request model warm-up can take a while. Try again, or submit a smaller photograph.',
       }
     case API_ERROR_CODES.HTTP:
-      return {
-        ...base,
-        hint:
-          error.status === 422
-            ? 'The backend rejected the submitted fields. Check the documented field names (file, location, additional_details) and whether it rejects the proposed optional fields.'
-            : 'The backend returned an error status. The message above is what it reported.',
-      }
+      return { ...base, hint: describeHttpHint(error.status) }
     case API_ERROR_CODES.UNEXPECTED_SCHEMA:
     case API_ERROR_CODES.MALFORMED_RESPONSE:
       return {
         ...base,
-        hint: 'The request reached the service, but the response did not match the documented schema. Adjust src/lib/analysis.js if the agreed contract has changed.',
+        hint: 'The request reached the service, but the response could not be read as an assessment. Your photograph and details are still in the form, so you can try again.',
       }
     case API_ERROR_CODES.VALIDATION:
       return { ...base, hint: 'Correct the highlighted field and submit again.' }
@@ -98,7 +140,6 @@ export default function ReportIssue() {
   const [additionalDetails, setAdditionalDetails] = useState('')
   const [errors, setErrors] = useState({})
   const [submitNotice, setSubmitNotice] = useState(null)
-  const [connection, setConnection] = useState({ state: 'idle', detail: null })
 
   const locationSectionRef = useRef(null)
   const fileSectionRef = useRef(null)
@@ -169,21 +210,14 @@ export default function ReportIssue() {
     reset()
   }, [releasePreview, reset])
 
-  const handleTestConnection = useCallback(async () => {
-    setConnection({ state: 'checking', detail: null })
-    const result = await checkBackendHealth()
-    setConnection({
-      state: result.ok ? 'ok' : result.reachable ? 'reachable' : 'unreachable',
-      detail: result.detail,
-    })
-  }, [])
-
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault()
+      // Ignore a second submit while one is running (button disabled + guard).
+      if (isAnalyzing) return
       setSubmitNotice(null)
 
-      const validation = validateReportForm({ file, location, landmark, additionalDetails })
+      const validation = validateReportForm({ file, location, landmark, additionalDetails, coordinates })
       setErrors(validation.errors)
 
       if (!validation.valid) {
@@ -221,7 +255,12 @@ export default function ReportIssue() {
         return
       }
 
-      // Only a real failure reaches this branch; nothing is simulated.
+      // A duplicate click while a request runs is ignored, not reported as a failure.
+      if (result.error.code === API_ERROR_CODES.DUPLICATE) return
+
+      // Only a real failure reaches this branch; nothing is simulated. The form
+      // state (photograph, location, details) is left untouched so the citizen
+      // can retry without starting again.
       setSubmitNotice({ tone: 'error', message: result.error.message })
     },
     [
@@ -231,6 +270,7 @@ export default function ReportIssue() {
       coordinates,
       file,
       followUpAnswers,
+      isAnalyzing,
       landmark,
       location,
       navigate,
@@ -240,23 +280,18 @@ export default function ReportIssue() {
 
   const apiErrorDisplay = useMemo(() => (apiError ? describeApiError(apiError) : null), [apiError])
 
-  const analyzeFields = useMemo(
-    () =>
-      describeAnalyzeFields({
-        issueCategory: categoryIsUserChosen ? categoryId : null,
-        coordinates,
-      }),
-    [categoryId, categoryIsUserChosen, coordinates],
-  )
-
   const isBusy = isAnalyzing
+  const hasPhoto = Boolean(file)
+  const hasLocation = Boolean(location.trim()) || Boolean(coordinates)
+  const hasExtras = categoryIsUserChosen || additionalDetails.trim().length > 0
+  const requiredDone = Number(hasPhoto) + Number(hasLocation)
 
   return (
     <>
       <PageHeader
         eyebrow="Citizen report"
         title="Report a civic problem"
-        description="Pick the category if you know it (or let the AI decide), add a photograph and tell us where the problem is. You will get an assessment, a complaint you can edit, and guidance on where to send it."
+        description="Add a photograph and a location. You'll get an AI assessment, an editable complaint and guidance on who to send it to."
         actions={
           <ConfirmButton
             label="Clear form"
@@ -269,138 +304,107 @@ export default function ReportIssue() {
         }
       />
 
-      <Container className="grid gap-8 py-8 sm:py-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
-        <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <Layers aria-hidden="true" className="size-4" />
-                </span>
-                <CardTitle as="h2">What kind of problem is it?</CardTitle>
-              </div>
-              <CardDescription>
-                Choose a category if you already know what it is. If you are unsure, pick &ldquo;Let AI identify the
-                issue&rdquo; and change it afterwards — the assessment never overrides your choice.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <CategoryPicker
-                value={categoryId}
-                onChange={handleCategoryChange}
+      <Container className="grid gap-8 py-8 sm:py-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:items-start">
+        <form id="report-form" onSubmit={handleSubmit} noValidate className="space-y-5">
+          <StepCard
+            number={1}
+            done={hasPhoto}
+            title="Add a photograph"
+            description="One clear image taken from a safe position, showing the extent of the problem."
+          >
+            <div ref={fileSectionRef} tabIndex={-1} className="rounded-xl focus-visible:outline-none">
+              <ImageDropzone
+                file={file}
+                previewUrl={previewUrl}
+                error={errors.file}
                 disabled={isBusy}
-                describedBy="category-explainer"
+                onSelectFile={handleSelectFile}
+                onClear={handleClearFile}
               />
-              <p id="category-explainer" className="text-xs leading-relaxed text-muted-foreground">
-                Categories are defined once in the application configuration, and they decide which optional questions you
-                see, how the complaint is titled, and which authorities are suggested later.
+            </div>
+            {errors.file ? (
+              <p className="text-xs font-medium text-destructive" role="alert">
+                {errors.file}
               </p>
+            ) : null}
+          </StepCard>
 
-              {selectedCategory ? (
-                <>
-                  <Separator />
-                  <CategoryFollowUps
-                    categoryId={categoryId}
-                    answers={followUpAnswers}
-                    onChange={handleFollowUpChange}
-                    disabled={isBusy}
-                  />
-                </>
-              ) : null}
-            </CardContent>
-          </Card>
+          <StepCard
+            number={2}
+            done={hasLocation}
+            title="Where is it?"
+            description="Type the address or area, use your current position, or tap the map to drop a pin."
+          >
+            <div ref={locationSectionRef} tabIndex={-1} className="rounded-xl focus-visible:outline-none">
+              <LocationField
+                location={location}
+                landmark={landmark}
+                coordinates={coordinates}
+                errors={{ location: errors.location, landmark: errors.landmark }}
+                disabled={isBusy}
+                onLocationChange={setLocation}
+                onLandmarkChange={setLandmark}
+                onCoordinatesChange={handleCoordinatesChange}
+              />
+            </div>
+          </StepCard>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <HardDriveUpload aria-hidden="true" className="size-4" />
-                </span>
-                <CardTitle as="h2">Photograph of the problem</CardTitle>
-              </div>
-              <CardDescription>
-                Required. One clear image, taken from a safe position, showing the extent of the damage.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div ref={fileSectionRef} tabIndex={-1} className="rounded-xl focus-visible:outline-none">
-                <ImageDropzone
-                  file={file}
-                  previewUrl={previewUrl}
-                  error={errors.file}
+          <StepCard
+            number={3}
+            done={hasExtras}
+            optional
+            title="Category and details"
+            description="Not sure what it is? Leave it on “Let AI identify the issue” — you can still change it later."
+          >
+            <CategoryPicker
+              value={categoryId}
+              onChange={handleCategoryChange}
+              disabled={isBusy}
+            />
+
+            {selectedCategory ? (
+              <>
+                <Separator />
+                <CategoryFollowUps
+                  categoryId={categoryId}
+                  answers={followUpAnswers}
+                  onChange={handleFollowUpChange}
                   disabled={isBusy}
-                  onSelectFile={handleSelectFile}
-                  onClear={handleClearFile}
                 />
-              </div>
-              {errors.file ? (
-                <p className="text-xs font-medium text-destructive" role="alert">
-                  {errors.file}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
+              </>
+            ) : null}
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <Send aria-hidden="true" className="size-4" />
+            <Separator />
+
+            <Field
+              id="report-details"
+              label="Anything else the photograph cannot show?"
+              optional
+              error={errors.additionalDetails}
+              hint="How long has it been like this? Does it get worse after rain? Has anyone been hurt?"
+              labelAccessory={
+                <span className="text-xs text-muted-foreground" data-slot="metric">
+                  {additionalDetails.length}/{MAX_DETAILS_LENGTH}
                 </span>
-                <CardTitle as="h2">Where is it, and anything else?</CardTitle>
-              </div>
-              <CardDescription>
-                Type the location, or capture your current position if you prefer. Manual entry always works, even if
-                location is denied or unavailable.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-5">
-              <div ref={locationSectionRef} tabIndex={-1} className="rounded-xl focus-visible:outline-none">
-                <LocationField
-                  location={location}
-                  landmark={landmark}
-                  coordinates={coordinates}
-                  errors={{ location: errors.location, landmark: errors.landmark }}
+              }
+            >
+              {({ id, describedBy, invalid }) => (
+                <Textarea
+                  id={id}
+                  ref={detailsRef}
+                  name="additional_details"
+                  rows={4}
+                  value={additionalDetails}
                   disabled={isBusy}
-                  onLocationChange={setLocation}
-                  onLandmarkChange={setLandmark}
-                  onCoordinatesChange={handleCoordinatesChange}
+                  maxLength={MAX_DETAILS_LENGTH}
+                  onChange={(event) => setAdditionalDetails(event.target.value)}
+                  placeholder="Optional context for the assessment and the complaint"
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid || undefined}
                 />
-              </div>
-
-              <Separator />
-
-              <Field
-                id="report-details"
-                label="Anything else the photograph cannot show?"
-                optional
-                error={errors.additionalDetails}
-                hint="How long has it been like this, does it get worse after rain, is access restricted, has anyone been injured?"
-                labelAccessory={
-                  <span className="text-xs text-muted-foreground" data-slot="metric">
-                    {additionalDetails.length}/{MAX_DETAILS_LENGTH}
-                  </span>
-                }
-              >
-                {({ id, describedBy, invalid }) => (
-                  <Textarea
-                    id={id}
-                    ref={detailsRef}
-                    name="additional_details"
-                    rows={5}
-                    value={additionalDetails}
-                    disabled={isBusy}
-                    maxLength={MAX_DETAILS_LENGTH}
-                    onChange={(event) => setAdditionalDetails(event.target.value)}
-                    placeholder="Optional context for the assessment and the complaint"
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid || undefined}
-                  />
-                )}
-              </Field>
-            </CardContent>
-          </Card>
+              )}
+            </Field>
+          </StepCard>
 
           {apiErrorDisplay ? (
             <Alert variant="danger" icon={ServerCrash} title={apiErrorDisplay.title} role="alert">
@@ -415,186 +419,83 @@ export default function ReportIssue() {
             </Alert>
           ) : null}
 
-          <Card>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-2.5">
-                  <Database aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-foreground">Ready to analyse</p>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {selectedCategory ? selectedCategory.label : 'Let AI identify the issue'} ·{' '}
-                      {file ? `${file.name} · ${formatFileSize(file.size)}` : 'no photograph yet'} ·{' '}
-                      {location.trim() ? location.trim() : 'no location yet'}
-                      {coordinates ? ' · coordinates captured' : ''}
-                    </p>
-                  </div>
-                </div>
+          {submitNotice?.tone === 'success' ? (
+            <Alert variant="success" icon={CircleCheckBig}>
+              {submitNotice.message}
+            </Alert>
+          ) : null}
 
-                <Button type="submit" size="lg" disabled={isBusy} className="sm:w-auto">
-                  {isBusy ? <Loader2 className="animate-spin" /> : <ScanSearch />}
-                  {isBusy ? 'Analysing…' : 'Analyse issue'}
-                </Button>
-              </div>
-
-              {isBusy ? (
-                <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                  <Loader2 aria-hidden="true" className="size-4 shrink-0 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Waiting for {analyzeUrl}. Large images and cold model start-up can take a minute.
-                  </p>
-                </div>
-              ) : null}
-
-              {submitNotice?.tone === 'success' ? (
-                <Alert variant="success" icon={CircleCheckBig}>
-                  {submitNotice.message}
-                </Alert>
-              ) : null}
-
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Submitting sends the photograph, the location text and your details to the backend for analysis. It does
-                not file a complaint with any government department.
+          {/* Sticky submit bar: always reachable, shows progress at a glance. */}
+          <div className="sticky bottom-3 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-4">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <p className="text-sm font-medium text-foreground">
+                {isBusy
+                  ? 'Analysing your photograph…'
+                  : requiredDone === 2
+                    ? 'Ready to analyse'
+                    : `${requiredDone} of 2 required steps done`}
               </p>
-            </CardContent>
-          </Card>
-
-          <BackendDependencyPanel
-            title="What this form does today"
-            description="The form, validation, complaint drafting and results rendering are complete. Producing a genuine assessment depends on the backend."
-          />
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={2}
+                aria-valuenow={requiredDone}
+                aria-label="Required steps completed"
+              >
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-300',
+                    isBusy ? 'w-full animate-pulse bg-primary' : 'bg-emerald-600',
+                  )}
+                  style={isBusy ? undefined : { width: `${(requiredDone / 2) * 100}%` }}
+                />
+              </div>
+              {isBusy ? (
+                <p className="text-xs text-muted-foreground">This can take up to a minute the first time.</p>
+              ) : null}
+            </div>
+            <Button type="submit" size="lg" disabled={isBusy} className="w-full sm:w-auto">
+              {isBusy ? <Loader2 className="animate-spin" /> : <ScanSearch />}
+              {isBusy ? 'Analysing…' : 'Analyse issue'}
+            </Button>
+          </div>
         </form>
 
-        <aside className="space-y-6 lg:sticky lg:top-24">
+        <aside className="space-y-5 lg:sticky lg:top-24">
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <Send aria-hidden="true" className="size-4" />
-                </span>
-                <CardTitle as="h2">Backend integration</CardTitle>
-              </div>
-              <CardDescription>
-                Exactly which fields this form will send, and the current state of the connection.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <dl className="space-y-3 text-sm">
-                <div className="space-y-1">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endpoint</dt>
-                  <dd className="break-all rounded-lg border border-border bg-muted/50 px-2.5 py-1.5 font-mono text-xs text-foreground">
-                    POST {analyzeUrl}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Configured by</dt>
-                  <dd className="text-xs text-muted-foreground">
-                    <span className="font-mono">VITE_API_URL</span>
-                    {isApiUrlConfigured ? ' (set for this build)' : ' (not set — falling back to the local default)'}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Multipart fields in this request
-                </p>
-                <ul className="space-y-1.5">
-                  {analyzeFields.map((field) => (
-                    <li key={field.name} className="flex items-start gap-2 text-xs">
-                      <span
-                        aria-hidden="true"
-                        className={
-                          field.sent
-                            ? 'mt-1.5 size-1.5 shrink-0 rounded-full bg-emerald-600'
-                            : 'mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/40'
-                        }
-                      />
-                      <span className="min-w-0">
-                        <span className={field.sent ? 'font-mono text-foreground' : 'font-mono text-muted-foreground'}>
-                          {field.name}
-                        </span>
-                        <span className="ml-1.5 text-muted-foreground">
-                          {field.kind === 'proposed' ? 'proposed' : 'documented'}
-                          {field.sent ? '' : ' — not sent'}
-                        </span>
-                        {field.note ? (
-                          <span className="block text-muted-foreground/90">{field.note}</span>
-                        ) : null}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  The proposed fields are optional additions to the agreed contract, documented in the README for the
-                  backend developer. A backend that ignores them keeps working.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestConnection}
-                  disabled={isBusy || connection.state === 'checking'}
-                >
-                  {connection.state === 'checking' ? <Loader2 className="animate-spin" /> : <Info />}
-                  Test backend connection
-                </Button>
-
-                {connection.state !== 'idle' && connection.state !== 'checking' ? (
-                  <Alert
-                    variant={connection.state === 'ok' ? 'success' : connection.state === 'reachable' ? 'info' : 'warning'}
-                    role="status"
-                  >
-                    <p className="font-medium">
-                      {connection.state === 'ok'
-                        ? 'The backend responded to /health.'
-                        : connection.state === 'reachable'
-                          ? 'The backend is reachable but did not answer /health.'
-                          : 'The backend could not be reached.'}
-                    </p>
-                    {connection.detail ? <p className="text-xs">{connection.detail}</p> : null}
-                    <p className="text-xs">
-                      The documented contract only guarantees POST /analyze, so a missing /health route is not an error.
-                    </p>
-                  </Alert>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <MessageSquarePlus aria-hidden="true" className="size-4" />
-                </span>
-                <CardTitle as="h2">What you get next</CardTitle>
-              </div>
-              <CardDescription>After the assessment loads you can prepare a complaint, find an authority and record what you did.</CardDescription>
+              <CardTitle as="h2">What happens next</CardTitle>
             </CardHeader>
             <CardContent>
-              <ol className="space-y-3 text-sm">
+              <ol className="space-y-4 text-sm">
                 {[
-                  'The assessment explains what the photograph appears to show, with severity and confidence.',
-                  'A formal complaint is drafted for you to edit, copy, download or print.',
-                  'Guidance suggests which authority may be responsible for this category and city.',
-                  'You record whether you sent it — CivicFix cannot submit or track anything itself.',
-                ].map((item, index) => (
-                  <li key={item} className="flex gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
+                  ['Assessment', 'What the photograph shows, with severity and confidence.'],
+                  ['Complaint draft', 'A formal complaint you can edit, copy, download or print.'],
+                  ['Who to contact', 'The authority likely responsible for this category and city.'],
+                  ['Your record', 'Note whether you sent it. CivicFix cannot submit or track it for you.'],
+                ].map(([title, text], index) => (
+                  <li key={title} className="flex gap-3">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
                       {index + 1}
                     </span>
-                    <span className="leading-relaxed text-muted-foreground">{item}</span>
+                    <span className="leading-relaxed text-muted-foreground">
+                      <span className="block font-medium text-foreground">{title}</span>
+                      {text}
+                    </span>
                   </li>
                 ))}
               </ol>
             </CardContent>
           </Card>
+
+          <div className="flex gap-3 rounded-2xl border border-border bg-muted/40 p-4">
+            <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-emerald-700" />
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Your photograph and details are sent to an AI service to produce the assessment. Nothing is filed with
+              any government department, and your photograph is not kept in your browser.
+            </p>
+          </div>
         </aside>
       </Container>
     </>
