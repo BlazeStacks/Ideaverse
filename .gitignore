@@ -35,3 +35,9 @@ Thumbs.db
 *.local
 
 .freebuff/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
