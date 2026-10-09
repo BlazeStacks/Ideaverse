@@ -18,6 +18,8 @@ export const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Report an Issue', to: '/report' },
   { label: 'Dashboard', to: '/dashboard' },
+  { label: 'About', to: '/about' },
+  { label: 'Help', to: '/help' },
 ]
 
 /* -------------------------------------------------------------------------- */

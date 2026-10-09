@@ -1,27 +1,25 @@
 import { BatteryCharging, ClipboardCopy, Download, PencilLine, Printer, ShieldCheck } from 'lucide-react'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
-import { SectionHeading } from '@/components/ui/section-heading'
 
 const POINTS = [
   {
     Icon: PencilLine,
     title: 'Drafted from your assessment',
     description:
-      'The complaint is assembled from the assessment, the category you confirmed and the details you typed. You edit every line before it goes anywhere.',
+      'Assembled from the assessment, the category you confirmed and the details you typed. You edit every line before it goes anywhere.',
   },
   {
     Icon: ClipboardCopy,
     title: 'Copy, download or print',
     description:
-      'Take the text in whichever form suits the channel you are using: paste it into an official form, save it as a .txt file, or print a clean copy.',
+      'Take the text in whichever form suits the channel: paste into an official form, save as a .txt file, or print a clean copy.',
   },
   {
     Icon: ShieldCheck,
     title: 'No invented facts',
     description:
-      'The draft says the photograph “appears to show” the problem. It never states measurements, costs or engineering conclusions as facts, and it marks anything missing as not provided.',
+      'The draft says the photograph "appears to show" the problem. It never states measurements or costs as facts, and marks anything missing as not provided.',
   },
   {
     Icon: BatteryCharging,
@@ -33,46 +31,126 @@ const POINTS = [
 
 export function ComplaintPrepSection() {
   return (
-    <section className="border-b border-border py-14 sm:py-20">
-      <Container className="space-y-10">
-        <SectionHeading
-          eyebrow="Prepare your complaint"
-          title="Turn an assessment into a complaint you can actually send"
-          description="Most citizens never escalate a civic problem because writing the complaint is the hard part. CivicFix drafts a formal, factual complaint — and then hands it to you to check."
-        />
+    <section
+      className="py-16 sm:py-24"
+      style={{ background: 'var(--color-navy)', borderBottom: '1px solid var(--color-navy-border)' }}
+    >
+      <Container>
+        {/* Section header */}
+        <div className="mb-12 max-w-2xl">
+          <p className="eyebrow-dark mb-3">Prepare your complaint</p>
+          <h2
+            className="mb-4 text-3xl sm:text-4xl"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--color-navy-foreground)',
+            }}
+          >
+            Turn an assessment into a complaint you can actually send.
+          </h2>
+          <p className="text-base leading-relaxed" style={{ color: 'var(--color-navy-muted)' }}>
+            Most citizens never escalate a civic problem because writing the complaint is the hard
+            part. CivicFix drafts a formal, factual complaint — and then hands it to you to check.
+          </p>
+        </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-start">
-          <div className="grid gap-4 sm:grid-cols-2">
+        {/* Two-column: points left, sample right */}
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+          {/* Feature points */}
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {POINTS.map(({ Icon, title, description }) => (
-              <Card key={title} className="gap-3">
-                <CardContent className="space-y-2">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                    <Icon aria-hidden="true" className="size-4" />
-                  </span>
-                  <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
-                </CardContent>
-              </Card>
+              <li
+                key={title}
+                className="flex flex-col gap-3 rounded-2xl p-5"
+                style={{
+                  border: '1px solid var(--color-navy-border)',
+                  background: 'rgba(255,255,255,0.03)',
+                }}
+              >
+                <span
+                  className="flex size-9 items-center justify-center rounded-xl"
+                  style={{
+                    background: 'rgba(232,129,10,0.15)',
+                    color: 'var(--color-amber-vivid)',
+                  }}
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <h3
+                  className="text-sm font-semibold"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--color-navy-foreground)',
+                  }}
+                >
+                  {title}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-navy-muted)' }}>
+                  {description}
+                </p>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <Card className="gap-4">
-            <CardHeader>
-              <CardTitle as="h3">What the draft looks like</CardTitle>
-              <CardDescription>
-                Illustrative sample showing the structure. Real values come from your own assessment and details.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs font-medium text-foreground">
+          {/* Sample complaint */}
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ border: '1px solid var(--color-navy-border)' }}
+          >
+            {/* Header bar */}
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                borderBottom: '1px solid var(--color-navy-border)',
+              }}
+            >
+              <p
+                className="text-xs font-semibold"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-navy-foreground)',
+                }}
+              >
+                Sample complaint structure
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--color-navy-muted)' }}>
+                Real values come from your assessment
+              </p>
+            </div>
+
+            {/* Subject line */}
+            <div
+              className="px-4 py-3"
+              style={{
+                background: 'rgba(232,129,10,0.08)',
+                borderBottom: '1px solid var(--color-navy-border)',
+              }}
+            >
+              <p
+                className="text-xs font-semibold"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-amber-vivid)',
+                }}
+              >
                 SUBJECT: Request for Inspection and Repair of Damaged Road
               </p>
-              <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-navy p-4 text-[11px] leading-relaxed text-navy-foreground">
-{`Respected Sir/Madam,
+            </div>
 
-I wish to report a problem with public infrastructure. The
-photograph taken at the location mentioned below appears to
-show damaged road surface.
+            {/* Body */}
+            <pre
+              className="overflow-x-auto p-4 text-[11px] leading-[1.7] whitespace-pre-wrap"
+              style={{
+                background: 'rgba(14,17,23,0.6)',
+                color: 'var(--color-navy-muted)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >{`Respected Sir/Madam,
+
+I wish to report a problem with public infrastructure.
+The photograph taken at the location mentioned below
+appears to show damaged road surface.
 
 REPORTED ISSUE
 Location:   … your location and landmark
@@ -83,31 +161,52 @@ The photograph appears to show: …
 
 REQUESTED ACTION
 I request that the concerned department inspect the
-reported location and take appropriate corrective action if
-the problem is confirmed.
+reported location and take appropriate corrective
+action if the problem is confirmed.
 
 DECLARATION
-… prepared with AI assistance and reviewed by me. It
-contains no measurements or cost figures that have not
-been verified on site.`}
-              </pre>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <ClipboardCopy aria-hidden="true" className="size-3.5" /> Copy
+… prepared with AI assistance and reviewed by me.
+Contains no measurements or cost figures not
+verified on site.`}</pre>
+
+            {/* Actions strip */}
+            <div
+              className="flex flex-wrap items-center gap-4 px-4 py-3"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                borderTop: '1px solid var(--color-navy-border)',
+              }}
+            >
+              {[
+                { Icon: ClipboardCopy, label: 'Copy' },
+                { Icon: Download, label: 'Download .txt' },
+                { Icon: Printer, label: 'Print' },
+              ].map(({ Icon, label }) => (
+                <span
+                  key={label}
+                  className="flex items-center gap-1.5 text-xs"
+                  style={{ color: 'var(--color-navy-muted)' }}
+                >
+                  <Icon aria-hidden="true" className="size-3.5" />
+                  {label}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Download aria-hidden="true" className="size-3.5" /> Download .txt
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Printer aria-hidden="true" className="size-3.5" /> Print
-                </span>
-              </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Copying, downloading or printing a complaint does not submit it. CivicFix records no submission until you
-                say you sent one yourself.
+              ))}
+            </div>
+
+            {/* Honesty note */}
+            <div
+              className="px-4 py-3"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                borderTop: '1px solid var(--color-navy-border)',
+              }}
+            >
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(141,132,118,0.7)' }}>
+                Copying, downloading or printing does not submit the complaint. CivicFix records no
+                submission until you say you sent one yourself.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </Container>
     </section>

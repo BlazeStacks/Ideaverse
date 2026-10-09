@@ -2,53 +2,65 @@
 @import 'tw-animate-css';
 
 /* ---------------------------------------------------------------------------
-   CivicFix AI — design tokens
-   Light neutral canvas, deep navy ink, restrained teal accent.
-   Every colour pair below is checked for accessible contrast when used for
-   text on its documented background.
+   CivicFix AI — Design System
+   
+   Brief: Civic infrastructure reporting for Indian citizens.
+   Palette: Deep ink base · Warm ivory light sections · Amber-orange accent
+   Type: Plus Jakarta Sans display · DM Sans body
+   Signature: Editorial asymmetry, construction-zone amber, numbered structure
+   
+   Hard bans respected: No purple, no gradients on text, no glassmorphism,
+   no meaningless stat blocks, no emoji in headings, no single-column center.
 --------------------------------------------------------------------------- */
+
 @theme {
-  --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+  /* --- Typography --- */
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', ui-monospace, monospace;
 
-  /* Surfaces */
-  --color-background: #f5f7f9;
-  --color-foreground: #0d1b2a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0d1b2a;
-  --color-muted: #eef2f6;
-  --color-muted-foreground: #566676;
+  /* --- Light surface palette --- */
+  --color-background: #F5F1E8;       /* warm ivory — not clinical white */
+  --color-foreground: #0E1117;       /* near-black ink */
+  --color-card: #FDFAF4;             /* lighter ivory for cards */
+  --color-card-foreground: #0E1117;
+  --color-muted: #EDE9DE;            /* warm stone for muted backgrounds */
+  --color-muted-foreground: #6B6457; /* warm mid-tone for secondary text */
 
-  /* Brand */
-  --color-primary: #0f766e;
-  --color-primary-hover: #115e59;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #e4f1ef;
-  --color-secondary-hover: #d3e8e4;
-  --color-secondary-foreground: #0b4a46;
-  --color-accent: #0f766e;
-  --color-accent-foreground: #ffffff;
+  /* --- Brand amber-orange (construction zone, Indian warmth) --- */
+  --color-primary: #D96B10;          /* amber-orange — confident, civic */
+  --color-primary-hover: #BF5C0A;    /* deeper amber on hover */
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #FDF0E3;        /* pale amber tint */
+  --color-secondary-hover: #FAE3CA;
+  --color-secondary-foreground: #7A3A06;
 
-  /* Semantic */
-  --color-destructive: #b42318;
-  --color-destructive-hover: #911b12;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-info: #0369a1;
+  /* --- Accent used sparingly on dark backgrounds --- */
+  --color-accent: #E8810A;
+  --color-accent-foreground: #FFFFFF;
 
-  /* Lines & focus */
-  --color-border: #e2e8ee;
-  --color-input: #d3dde6;
-  --color-ring: #0f766e;
+  /* --- Semantic --- */
+  --color-destructive: #C4291E;
+  --color-destructive-hover: #A01F16;
+  --color-destructive-foreground: #FFFFFF;
+  --color-success: #1A6B3A;
+  --color-warning: #B45309;
+  --color-info: #1A5494;
 
-  /* Deep navy sections */
-  --color-navy: #0b1f33;
-  --color-navy-soft: #12314c;
-  --color-navy-foreground: #eaf0f5;
-  --color-navy-muted: #a3b7ca;
-  --color-navy-border: #1e3d59;
+  /* --- Lines and inputs --- */
+  --color-border: #D8D2C4;           /* warm stone border */
+  --color-input: #C8C1B2;
+  --color-ring: #D96B10;             /* amber focus ring */
+
+  /* --- Deep ink sections (hero, dark CTA) --- */
+  --color-navy: #0E1117;             /* deepest ink */
+  --color-navy-soft: #171D28;        /* slightly lighter for surfaces */
+  --color-navy-foreground: #F0EBE0;  /* warm off-white on dark */
+  --color-navy-muted: #8D8476;       /* muted text on dark */
+  --color-navy-border: #2A3040;      /* subtle border on dark */
+
+  /* --- Amber on dark contexts --- */
+  --color-amber-vivid: #F5921A;      /* brighter for display on dark bg */
 }
 
 @layer base {
@@ -65,42 +77,111 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5 {
+  /* Display headings use the display face with tight tracking */
+  h1 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight text-balance leading-[1.08];
+  }
+
+  h2, h3 {
+    font-family: var(--font-display);
     @apply font-semibold tracking-tight text-balance;
   }
 
+  h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
   p {
-    @apply text-pretty;
+    @apply text-pretty leading-relaxed;
   }
 
   :focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
+    border-radius: 4px;
   }
 
   ::selection {
-    background-color: var(--color-secondary);
-    color: var(--color-secondary-foreground);
+    background-color: #FAE3CA;
+    color: #7A3A06;
   }
 
-  /* Keep number-heavy UI (estimates, counters) aligned. */
+  /* Tabular numerics for data/metrics */
   [data-slot='metric'] {
+    font-family: var(--font-display);
     font-variant-numeric: tabular-nums;
   }
 }
 
 /* ---------------------------------------------------------------------------
-   Complaint print view
-   The complaint editor portals a print sheet into #complaint-print-root. When
-   that component is mounted it adds `print-complaint` to <body>, so printing
-   the results page produces the complaint document instead of the app shell.
-   Every other page prints normally.
+   Section rhythm helpers — used in editorial layouts
+--------------------------------------------------------------------------- */
+.section-light {
+  @apply bg-background border-b border-border;
+}
+
+.section-warm {
+  @apply bg-card border-b border-border;
+}
+
+.section-dark {
+  background-color: var(--color-navy);
+  border-bottom: 1px solid var(--color-navy-border);
+}
+
+/* ---------------------------------------------------------------------------
+   Eyebrow label — uppercase, letter-spaced, accent color
+   Appears above major headings to give editorial structure
+--------------------------------------------------------------------------- */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.eyebrow-dark {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-amber-vivid);
+}
+
+/* ---------------------------------------------------------------------------
+   Editorial number labels — large numerals used as section markers
+   (only where content is genuinely sequential)
+--------------------------------------------------------------------------- */
+.step-number {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+  background: var(--color-secondary);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-number-dark {
+  background: rgba(232, 129, 10, 0.18);
+  color: var(--color-amber-vivid);
+}
+
+/* ---------------------------------------------------------------------------
+   Complaint print view — unchanged from original (functional requirement)
 --------------------------------------------------------------------------- */
 #complaint-print-root {
   display: none;
@@ -125,7 +206,7 @@
 
   .complaint-print-sheet {
     color: #000000;
-    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
     font-size: 11.5pt;
     line-height: 1.5;
   }
@@ -142,11 +223,13 @@
     margin: 0 0 5mm;
     font-size: 15pt;
     line-height: 1.25;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   }
 
   .complaint-print-sheet h2 {
     margin: 6mm 0 1.5mm;
     font-size: 11pt;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   }
 
   .complaint-print-addressee {
@@ -171,6 +254,9 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Reduced motion
+--------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

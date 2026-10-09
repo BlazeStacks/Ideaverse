@@ -2,7 +2,9 @@ import { Route, Routes } from 'react-router-dom'
 
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnalysisProvider } from '@/context/AnalysisContext'
+import About from '@/pages/About'
 import Dashboard from '@/pages/Dashboard'
+import Help from '@/pages/Help'
 import Home from '@/pages/Home'
 import NotFound from '@/pages/NotFound'
 import ReportDetail from '@/pages/ReportDetail'
@@ -22,6 +24,8 @@ export default function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/help" element={<Help />} />
           <Route path="/report" element={<ReportIssue />} />
           <Route path="/results" element={<ReportResults />} />
           <Route path="/dashboard" element={<Dashboard />} />

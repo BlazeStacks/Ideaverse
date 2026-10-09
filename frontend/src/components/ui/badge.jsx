@@ -7,14 +7,23 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-secondary text-secondary-foreground ring-secondary-hover',
-        neutral: 'bg-muted text-foreground ring-border',
-        outline: 'bg-card text-muted-foreground ring-border',
-        muted: 'bg-muted text-muted-foreground ring-border',
-        success: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
-        warning: 'bg-amber-50 text-amber-900 ring-amber-200',
-        danger: 'bg-red-50 text-red-900 ring-red-200',
-        info: 'bg-sky-50 text-sky-900 ring-sky-200',
+        // Amber primary badge
+        default:
+          'bg-secondary text-secondary-foreground ring-secondary-hover',
+        neutral:
+          'bg-muted text-foreground ring-border',
+        outline:
+          'bg-card text-muted-foreground ring-border',
+        muted:
+          'bg-muted text-muted-foreground ring-border',
+        success:
+          'bg-emerald-50 text-emerald-900 ring-emerald-200',
+        warning:
+          'bg-amber-50 text-amber-900 ring-amber-200',
+        danger:
+          'bg-red-50 text-red-900 ring-red-200',
+        info:
+          'bg-sky-50 text-sky-900 ring-sky-200',
       },
       size: {
         default: 'px-2.5 py-0.5 text-xs',

@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils'
 
-/** Bordered surface. Spacing lives on the container so sub-sections can be omitted. */
+/** Bordered surface. Spacing lives on CardContent so sub-sections can be omitted. */
 export function Card({ className, ...props }) {
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs sm:p-6',
+        'flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 text-card-foreground sm:p-6',
         className,
       )}
       {...props}
@@ -18,7 +18,13 @@ export function CardHeader({ className, ...props }) {
 }
 
 export function CardTitle({ className, as: Component = 'h3', ...props }) {
-  return <Component className={cn('text-base font-semibold leading-6', className)} {...props} />
+  return (
+    <Component
+      className={cn('text-base font-semibold leading-6', className)}
+      style={{ fontFamily: 'var(--font-display)' }}
+      {...props}
+    />
+  )
 }
 
 export function CardDescription({ className, ...props }) {

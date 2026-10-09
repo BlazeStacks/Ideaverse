@@ -10,21 +10,27 @@ import { cn } from '@/lib/utils'
 
 function navLinkClassName({ isActive }) {
   return cn(
-    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+    'relative px-3 py-2 text-sm font-medium transition-colors duration-150 rounded-lg',
     isActive
-      ? 'bg-secondary text-secondary-foreground'
-      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      ? 'text-foreground bg-muted'
+      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',
   )
 }
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
 
-  // Close the mobile menu whenever the route changes.
   useEffect(() => {
     setIsMenuOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     if (!isMenuOpen) return undefined
@@ -36,8 +42,16 @@ export function Header() {
   }, [isMenuOpen])
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+    <header
+      className={cn(
+        'sticky top-0 z-40 border-b transition-all duration-200',
+        scrolled
+          ? 'border-border bg-card/96 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.06)]'
+          : 'border-transparent bg-card/90 backdrop-blur-sm',
+      )}
+    >
       <Container className="flex h-16 items-center justify-between gap-4">
+        {/* Brand */}
         <Link
           to="/"
           className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -45,13 +59,19 @@ export function Header() {
         >
           <BrandMark />
           <span className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-tight text-foreground">{APP_NAME}</span>
-            <span className="hidden text-[11px] font-medium text-muted-foreground sm:block">
-              Civic infrastructure assessment
+            <span
+              className="text-base font-bold tracking-tight text-foreground"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {APP_NAME}
+            </span>
+            <span className="hidden text-[10px] font-medium tracking-wide uppercase text-muted-foreground sm:block">
+              Civic infrastructure
             </span>
           </span>
         </Link>
 
+        {/* Desktop nav */}
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
           {NAV_LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'} className={navLinkClassName}>
@@ -60,13 +80,14 @@ export function Header() {
           ))}
         </nav>
 
+        {/* CTA + mobile toggle */}
         <div className="flex items-center gap-2">
           <Button asChild size="sm" className="hidden sm:inline-flex">
             <Link to="/report">Report an Issue</Link>
           </Button>
 
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             className="md:hidden"
             aria-expanded={isMenuOpen}
@@ -79,6 +100,7 @@ export function Header() {
         </div>
       </Container>
 
+      {/* Mobile menu */}
       {isMenuOpen ? (
         <div id="mobile-navigation" className="border-t border-border bg-card md:hidden">
           <Container className="flex flex-col gap-1 py-3">
@@ -91,8 +113,8 @@ export function Header() {
                   cn(
                     'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-secondary text-secondary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                   )
                 }
               >

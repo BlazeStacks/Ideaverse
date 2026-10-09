@@ -21,9 +21,19 @@ export function PageHeader({ eyebrow, title, description, actions, children, cla
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex max-w-3xl flex-col gap-3">
             {eyebrow ? (
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{eyebrow}</p>
+              <p
+                className="text-[11px] font-semibold uppercase tracking-[0.12em]"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                {eyebrow}
+              </p>
             ) : null}
-            <h1 className="text-2xl leading-tight text-foreground sm:text-3xl">{title}</h1>
+            <h1
+              className="text-2xl leading-tight text-foreground sm:text-3xl"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {title}
+            </h1>
             {description ? (
               <div className="space-y-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {description}
@@ -39,3 +49,4 @@ export function PageHeader({ eyebrow, title, description, actions, children, cla
     </div>
   )
 }
+

@@ -1,84 +1,81 @@
-import { Building2, Camera, PencilLine, RefreshCw, ScanLine } from 'lucide-react'
+import { Camera, PencilLine, ScanLine } from 'lucide-react'
 
-import { Alert } from '@/components/ui/alert'
 import { Container } from '@/components/ui/container'
-import { SectionHeading } from '@/components/ui/section-heading'
 
 const STEPS = [
   {
     Icon: Camera,
-    step: '1',
+    number: '01',
     title: 'Report',
-    description:
-      'Pick a category or let the AI decide, add a photograph and say where the problem is. Manual location entry always works.',
+    description: 'Upload a photo and tell us where the issue is.',
   },
   {
     Icon: ScanLine,
-    step: '2',
+    number: '02',
     title: 'Assess',
     description:
-      'The backend returns what the photograph appears to show: severity, confidence, observations and safety concerns.',
+      'AI analyses the visible problem and suggests its severity and possible next steps.',
   },
   {
     Icon: PencilLine,
-    step: '3',
-    title: 'Prepare',
+    number: '03',
+    title: 'Take Action',
     description:
-      'A formal complaint is drafted from the assessment and your own words. Edit it, copy it, download it or print it.',
-  },
-  {
-    Icon: Building2,
-    step: '4',
-    title: 'Find authority',
-    description:
-      'Guidance on which body may be responsible for this kind of problem in your city, and which channels have been verified.',
-  },
-  {
-    Icon: RefreshCw,
-    step: '5',
-    title: 'Follow up',
-    description:
-      'Record what you sent and when. CivicFix keeps your own record honestly — it cannot see any authority portal.',
+      'Review the assessment and prepare a complaint for the relevant authority.',
   },
 ]
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="scroll-mt-20 border-b border-border py-14 sm:py-20">
-      <Container className="space-y-10">
-        <SectionHeading
-          eyebrow="How CivicFix works"
-          title="Report → Assess → Prepare → Find authority → Follow up"
-          description="Five steps from a photograph on your phone to a complaint you can actually send. Each step tells you exactly what it did for you, and what is still your job."
-        />
+    <section id="how-it-works" className="scroll-mt-20 border-b border-border py-16 sm:py-24">
+      <Container>
+        <div className="mb-10 max-w-xl">
+          <p className="eyebrow mb-3">How it works</p>
+          <h2
+            className="text-3xl sm:text-4xl"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Three steps from photo to complaint.
+          </h2>
+        </div>
 
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {STEPS.map(({ Icon, step, title, description }) => (
-            <li key={title} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+        <ol className="grid gap-5 sm:grid-cols-3">
+          {STEPS.map(({ Icon, number, title, description }) => (
+            <li
+              key={title}
+              className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6"
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className="flex size-10 items-center justify-center rounded-xl"
+                  style={{ background: 'var(--color-secondary)', color: 'var(--color-primary)' }}
+                >
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
-                <span aria-hidden="true" className="text-sm font-semibold text-muted-foreground/60">
-                  {step}
+                <span
+                  className="text-3xl font-bold tabular-nums"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--color-border)',
+                    letterSpacing: '-0.03em',
+                  }}
+                  aria-hidden="true"
+                >
+                  {number}
                 </span>
               </div>
-              <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-foreground">{title}</h3>
+              <div>
+                <h3
+                  className="mb-1.5 text-base font-bold text-foreground"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {title}
+                </h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
               </div>
             </li>
           ))}
         </ol>
-
-        <Alert variant="info" title="Steps 2 to 5 work from real data only">
-          <p>
-            The reporting form, validation, assessment layout, complaint drafting and authority guidance are all
-            implemented. Step 2 needs the AI backend, which is developed separately. Until it is running, the interface
-            reports the real connection failure instead of inventing an assessment — and the complaint template will not
-            invent facts to fill the gaps.
-          </p>
-        </Alert>
       </Container>
     </section>
   )

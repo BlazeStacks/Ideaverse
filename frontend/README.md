@@ -83,14 +83,15 @@ frontend/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
-│   │   ├── home/        # landing-page sections (hero, workflow, categories, ...)
+│   │   ├── home/        # landing-page sections (hero, workflow, categories, CTA)
+│   │   ├── about/       # About-page sections
 │   │   ├── layout/      # header, footer, shell, page header, scroll restoration
 │   │   ├── reports/     # reporting + results + dashboard building blocks
 │   │   └── ui/          # design-system primitives (button, card, badge, alert, ...)
 │   ├── context/         # in-memory analysis session provider
 │   ├── hooks/           # useReports, useReportFilters, useDocumentTitle
 │   ├── lib/             # constants, formatting, validation, response normalisation
-│   ├── pages/           # Home, ReportIssue, ReportResults, Dashboard, ReportDetail, NotFound
+│   ├── pages/           # Home, About, Help, ReportIssue, ReportResults, Dashboard, ReportDetail, NotFound
 │   ├── services/        # civicfixApi.js (backend integration), reportsService.js (reports data)
 │   ├── App.jsx          # route table
 │   ├── index.css        # Tailwind v4 theme tokens + base layer
@@ -117,7 +118,9 @@ data lives in a hook, which is all this scope needs.
 
 | Route                          | Page             | Notes                                                                |
 | ------------------------------ | ---------------- | -------------------------------------------------------------------- |
-| `/`                            | Landing          | Product explanation, categories, workflow, honest build status.       |
+| `/`                            | Landing          | Hero, three-step overview, category grid, call to action.             |
+| `/about`                       | About            | Assessment, complaint preparation, authority guidance, privacy.       |
+| `/help`                        | Help             | FAQ and troubleshooting.                                              |
 | `/report`                      | Report an issue  | Image upload with drag & drop, validation, location, details.         |
 | `/results`                     | Assessment       | Renders the backend response; explains itself when there is none.     |
 | `/dashboard`                   | Dashboard        | Stats, search, filters, report list, honest empty state.              |

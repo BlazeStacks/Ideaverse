@@ -35,9 +35,10 @@ export function SectionHeading({
       {eyebrow ? (
         <p
           className={cn(
-            'text-xs font-semibold uppercase tracking-[0.14em]',
-            tone === 'light' ? 'text-primary' : 'text-emerald-300',
+            'text-[11px] font-semibold uppercase tracking-[0.12em]',
+            tone === 'light' ? 'text-primary' : 'text-amber-vivid',
           )}
+          style={tone === 'dark' ? { color: 'var(--color-amber-vivid)' } : undefined}
         >
           {eyebrow}
         </p>
@@ -49,6 +50,7 @@ export function SectionHeading({
           tone === 'light' ? 'text-foreground' : 'text-navy-foreground',
           align === 'center' && 'max-w-3xl',
         )}
+        style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
       </Heading>

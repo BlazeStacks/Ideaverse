@@ -1,24 +1,14 @@
 import { BadgeCheck, Building2, CircleHelp, ShieldQuestion, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { Alert } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
-import { SectionHeading } from '@/components/ui/section-heading'
 import {
   AUTHORITY_ENTRIES,
   DIRECTORY_REVIEWED_ON,
   getVerifiedChannels,
 } from '@/config/authorityDirectory'
 
-/**
- * Authority guidance section.
- *
- * The numbers shown here are computed from the directory configuration, so the
- * page cannot claim more coverage than the data actually has.
- */
 export function AuthorityGuidanceSection() {
   const entryCount = AUTHORITY_ENTRIES.length
   const verifiedChannelCount = AUTHORITY_ENTRIES.reduce(
@@ -28,126 +18,194 @@ export function AuthorityGuidanceSection() {
   const citiesWithEntries = Array.from(new Set(AUTHORITY_ENTRIES.flatMap((entry) => entry.cityIds)))
 
   return (
-    <section className="border-b border-border bg-card py-14 sm:py-20">
-      <Container className="space-y-10">
-        <SectionHeading
-          eyebrow="Find the right authority"
-          title="Who should you report it to?"
-          description="Knowing who owns the asset is the hardest part. A road may belong to the municipal corporation, the state public works department, the national highways authority or a cantonment board — and getting it wrong is why complaints go nowhere."
-        />
+    <section className="border-b border-border py-16 sm:py-24">
+      <Container>
+        {/* Section header */}
+        <div className="mb-12 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <p className="eyebrow mb-3">Find the right authority</p>
+            <h2
+              className="mb-4 max-w-2xl text-3xl sm:text-4xl"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Who should you actually report it to?
+            </h2>
+            <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
+              Getting the authority wrong is why most complaints go nowhere. A road may belong to
+              the municipal corporation, state PWD, national highways authority or a cantonment
+              board — CivicFix helps you distinguish them.
+            </p>
+          </div>
+        </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+        {/* Two-column layout */}
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+          {/* Left: directory facts + feature list */}
+          <div className="space-y-6">
+            {/* Real stats from the directory data */}
+            <dl className="grid grid-cols-3 gap-3">
+              {[
+                {
+                  label: 'Entries',
+                  value: entryCount,
+                  sub: `${citiesWithEntries.length === 1 ? '1 city so far' : `${citiesWithEntries.length} cities`}`,
+                },
+                {
+                  label: 'Verified channels',
+                  value: verifiedChannelCount,
+                  sub: 'Checked against the authority’s own pages',
+                },
+                {
+                  label: 'Last reviewed',
+                  value: DIRECTORY_REVIEWED_ON,
+                  sub: 'By hand, entry by entry',
+                  isText: true,
+                },
+              ].map(({ label, value, sub, isText }) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-border bg-card p-4"
+                >
+                  <dt className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {label}
+                  </dt>
+                  <dd
+                    className={isText ? 'text-base font-semibold text-foreground' : 'text-3xl font-bold text-foreground'}
+                    data-slot="metric"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    {value}
+                  </dd>
+                  <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">{sub}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {/* How it works */}
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: 'var(--color-secondary)', color: 'var(--color-primary)' }}
+                >
                   <Building2 aria-hidden="true" className="size-4" />
                 </span>
-                <CardTitle as="h3">What the directory does</CardTitle>
+                <h3
+                  className="text-sm font-semibold text-foreground"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  What the directory does
+                </h3>
               </div>
-              <CardDescription>
-                A small, hand-checked list of bodies that may be responsible, with the verification state of each
-                reporting channel.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <dl className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Entries</dt>
-                  <dd className="text-2xl font-semibold text-foreground" data-slot="metric">
-                    {entryCount}
-                  </dd>
-                  <dd className="text-xs text-muted-foreground">
-                    {citiesWithEntries.length === 1 ? '1 city so far' : `${citiesWithEntries.length} cities`}
-                  </dd>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Verified channels
-                  </dt>
-                  <dd className="text-2xl font-semibold text-foreground" data-slot="metric">
-                    {verifiedChannelCount}
-                  </dd>
-                  <dd className="text-xs text-muted-foreground">Checked against the authority&rsquo;s own pages</dd>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Last reviewed
-                  </dt>
-                  <dd className="text-sm font-medium text-foreground" data-slot="metric">
-                    {DIRECTORY_REVIEWED_ON}
-                  </dd>
-                  <dd className="text-xs text-muted-foreground">By hand, entry by entry</dd>
-                </div>
-              </dl>
-
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {[
-                  'You choose your city — CivicFix does not guess it from the photograph or the AI label.',
-                  'Both the primary suggestion and the alternatives are shown, with the reason for each.',
+                  'You choose your city — CivicFix does not guess from the photograph or AI label.',
+                  'Both primary suggestion and alternatives shown, with the reason for each.',
                   'Every channel states whether it is verified, when, and how it was checked.',
-                  'Verified links open the authority’s own website in a new tab. Unverified ones are simply not linked.',
+                  'Verified links open the authority\u2019s own website. Unverified ones are simply not linked.',
                 ].map((item) => (
                   <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground">
-                    <BadgeCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <BadgeCheck
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0"
+                      style={{ color: 'var(--color-primary)' }}
+                    />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
+          {/* Right: honesty cards */}
           <div className="space-y-4">
-            <Alert
-              variant="warning"
-              icon={TriangleAlert}
-              title="This is guidance, not an official determination"
+            {/* Guidance caveat */}
+            <div
+              className="rounded-2xl border-l-2 p-5"
+              style={{
+                borderLeftColor: 'var(--color-warning)',
+                background: '#FFF8EE',
+                border: '1px solid #F5D9A8',
+                borderLeftWidth: '3px',
+              }}
             >
-              <p>
-                CivicFix is not connected to any government body. It cannot confirm who legally owns a specific road,
-                drain or streetlight, and it will not invent a portal, phone number or email address. Where a channel is
-                not confirmed, the interface says so and explains how to find the office yourself.
+              <div className="mb-2 flex items-start gap-2.5">
+                <TriangleAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0"
+                  style={{ color: 'var(--color-warning)' }}
+                />
+                <h3
+                  className="text-sm font-semibold"
+                  style={{ fontFamily: 'var(--font-display)', color: '#7A4A00' }}
+                >
+                  Guidance, not an official determination
+                </h3>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: '#8A5C20' }}>
+                CivicFix is not connected to any government body. It cannot confirm who legally
+                owns a specific asset. Where a channel is not confirmed, the interface says so and
+                explains how to find the office yourself.
               </p>
-            </Alert>
+            </div>
 
-            <Card className="gap-3">
-              <CardContent className="space-y-3">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <ShieldQuestion aria-hidden="true" className="size-4" />
+            {/* Verified channels */}
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <span
+                className="mb-3 flex size-9 items-center justify-center rounded-xl"
+                style={{ background: 'var(--color-muted)', color: 'var(--color-primary)' }}
+              >
+                <ShieldQuestion aria-hidden="true" className="size-4" />
+              </span>
+              <h3
+                className="mb-1.5 text-sm font-semibold text-foreground"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                Only verified channels get a link
+              </h3>
+              <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+                Channels are marked verified only when identified from the authority's own website,
+                and each carries the date it was checked. Everything else is listed as unverified.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{ background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0' }}
+                >
+                  <BadgeCheck aria-hidden="true" className="size-3" />
+                  Verified channel
                 </span>
-                <h3 className="text-sm font-semibold text-foreground">Only verified channels get a link</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Channels are marked verified only when they were identified from the authority&rsquo;s own website or
-                  official communication, and each one carries the date it was checked. Everything else is listed as
-                  unverified so you can look it up rather than trust a guess.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="success">
-                    <BadgeCheck aria-hidden="true" className="size-3.5" />
-                    Verified channel
-                  </Badge>
-                  <Badge variant="warning">Unverified — no link</Badge>
-                </div>
-              </CardContent>
-            </Card>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}
+                >
+                  Unverified — no link
+                </span>
+              </div>
+            </div>
 
-            <Card className="gap-3">
-              <CardContent className="space-y-3">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <CircleHelp aria-hidden="true" className="size-4" />
-                </span>
-                <h3 className="text-sm font-semibold text-foreground">When CivicFix cannot tell you</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  If your city or your issue category is not in the directory, CivicFix says so and gives you a short
-                  process for finding the right office — check the asset signage, ask the local body, use only official
-                  domains, and keep a record of what you sent.
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/report">Try it with your own report</Link>
-                </Button>
-              </CardContent>
-            </Card>
+            {/* When we can't tell */}
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <span
+                className="mb-3 flex size-9 items-center justify-center rounded-xl"
+                style={{ background: 'var(--color-muted)', color: 'var(--color-primary)' }}
+              >
+                <CircleHelp aria-hidden="true" className="size-4" />
+              </span>
+              <h3
+                className="mb-1.5 text-sm font-semibold text-foreground"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                When CivicFix cannot tell you
+              </h3>
+              <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+                If your city or issue category is not in the directory, CivicFix says so and gives
+                you a short process for finding the right office yourself.
+              </p>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/report">Try it with your own report</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </Container>
