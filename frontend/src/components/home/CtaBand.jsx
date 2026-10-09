@@ -13,13 +13,14 @@ export function CtaBand() {
             Start with a single report
           </h2>
           <p className="text-base leading-relaxed text-navy-muted">
-            Submit a photograph and see exactly what the platform is able to tell you. If the analysis backend is not
-            running, you will get a clear explanation rather than a plausible-looking result.
+            Add a photograph and a location, and see exactly what the platform can tell you: the assessment, a complaint
+            you can edit, and where it may need to go. If the analysis backend is not running, you get a clear
+            explanation instead of a plausible-looking result.
           </p>
           <p className="flex items-start gap-2 text-sm text-navy-muted">
             <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-300" />
-            No complaint is filed with any authority by this application, and photographs are never stored in your
-            browser.
+            No complaint is filed with any authority by this application, photographs are never stored in your browser,
+            and CivicFix is not a government service.
           </p>
         </div>
 

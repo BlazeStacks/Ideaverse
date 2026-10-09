@@ -25,7 +25,6 @@ import {
   OTHER_CITY_ID,
   VERIFICATION_STATUS,
   describeVerification,
-  getCityById,
   getEntriesForCity,
   getSupportedCities,
   getVerifiedChannels,
